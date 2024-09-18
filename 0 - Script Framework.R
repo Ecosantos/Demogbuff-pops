@@ -65,9 +65,9 @@ cbind(unlist(loadedNamespaces()),
 #			SETTINGS
 #==================================================================
 #Directory
-setwd("C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Final")
+setwd("C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops")
 
-DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Final/Data"
+DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops/Data"
 
 #==================================================================
 #		COMPADRE, COMADRE and MOSAIC 
@@ -166,6 +166,7 @@ climate_df<-readRDS(paste0(DataDir,"/climate_df.RDS"))
 
 climate_df%>%select(-ID)%>%cor()%>%corrplot::corrplot()
 
+# Produce the climatic/environmental PCA
 ClimPCA<-climate_df%>%
 mutate_at(vars(-c(ID)),scale)%>%
 column_to_rownames("ID")%>%
@@ -209,17 +210,6 @@ geom_map(
     data = world, map = world,
     aes(long, lat, map_id = region),
     color = "grey50", fill = "grey95", linewidth= 0.05)
-
-gmap +
- geom_point(
-    data = Plot_clim,
-    aes(x=Lon, y=Lat, fill = Dim.1,stroke=.5,size=Dim.2),shape=21)+
-scale_fill_viridis(option="magma")+
-scale_size(range = c(1.5, 5))+
- theme_void()
-
-#ggsave(file="Figures/ClimMap_all.svg")
-
 
 gmap +
  geom_point(
