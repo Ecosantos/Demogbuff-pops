@@ -280,23 +280,29 @@ rm(temp)
 unlist(MatRep)[unlist(MatRep)>2]%>%length()
 
 #---------------------------------------------------------------------------
-#		Merge Demographic calculations in a single Data frame
+#		Merge Demographic buffering calculations in a single Data frame
 #---------------------------------------------------------------------------
-ElasSigVR_data<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
-Map(cbind, ID = names(.), .)%>%
-do.call(rbind,.)%>%
-as_tibble()%>%
-select(-SD)%>%
-pivot_wider(names_from = VR,values_from=Mean)%>%
-filter(complete.cases(.))
-
-
 ElasSigVR_full<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
 Map(cbind, ID = names(.), .)%>%
 do.call(rbind,.)%>%
 as_tibble()%>%
 pivot_wider(names_from = VR,values_from=c(Mean,SD))%>%
 filter(complete.cases(.))
+
+#----------
+#A simpler version is created without standard desviation
+# as standard desviation was not included in the model
+# The full version ("ElasSigVR_full") is still required to summary statistics below
+#	see RANKING BUFFERING
+#----------
+ElasSigVR_data<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
+Map(cbind, ID = names(.), .)%>%
+do.call(rbind,.)%>%
+as_tibble()%>%
+select(-SD)%>%				#Remove standard desviation
+pivot_wider(names_from = VR,values_from=Mean)%>%
+filter(complete.cases(.))
+
 
 StochElasVR_data<-lapply(StochElasVR,rownames_to_column, var = "VR")%>%
 Map(cbind, ID = names(.), .)%>%
@@ -306,6 +312,12 @@ select(-SD)%>%
 pivot_wider(names_from = VR,values_from=Mean)%>%
 filter(complete.cases(.))
 
+
+
+#---------------------------------------------------------------------------
+#		Final demographic buffering data preparation. 
+# Then, it will be ready for merging with climatic data and life history traits
+#---------------------------------------------------------------------------
 databuff_data<-left_join(
 ElasSigVR_data%>%setNames(paste0(names(.),'_SigElas')),
 StochElasVR_data%>%setNames(paste0(names(.),'_Base')),
@@ -327,20 +339,6 @@ databuff_data<-left_join(
 	by=c("ID_SigElas"="ID"))%>%
 		filter(MatRep>2)%>%
 		  rename(ID="ID_SigElas")
-
-
-
-# Keep only 95% values of cumulative and survival 
-#   to avoid overdispersion in the plot
-#	This difficult visualization
-#databuff_data%>%
-#filter(!(Survival_Base>quantile(Survival_Base,.975)))%>%
-#filter(!(Survival_Base<quantile(Survival_Base,.025)))%>%
-#filter(!(Cumulative_SigElas>quantile(Cumulative_SigElas,.975)))%>%
-#filter(!(Cumulative_SigElas<quantile(Cumulative_SigElas,.025)))%>%
-#select(-ID)%>%
-#GGally::ggpairs(.)
-
 
 #Comparing buffering in vital rates and life history traits
 databuff_data%>%
