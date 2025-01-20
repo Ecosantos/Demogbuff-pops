@@ -11,9 +11,11 @@
 #		LOAD & FILTERING
 #==================================================================
 
-mosaic <- Rmosaic::mos_fetch("v1.0.0")	#mos_fetch for some reason is bugged so, it clean everything else, so, run again the directory
+mosaic <- Rmosaic::mos_fetch("v1.0.0")	
 
-DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Data"
+#mos_fetch for some reason is bugged so, it clean everything else, so, run again the directory
+DataDir<-"Data"
+
 
 load(paste0(DataDir,"/COMADRE_v.4.23.3.1.RData"))
 load(paste0(DataDir,"/COMPADRE_v.6.23.5.0.RData"))
@@ -57,7 +59,7 @@ compadre_sub <- subset(
 	& check_singular_U == FALSE 
 	& check_component_sum == TRUE 
 	& check_ergodic == TRUE 
- 	& MatrixComposite == "Individual" 
+# 	& MatrixComposite == "Individual" # REMOVED in 20/01/2025
 & StudyDuration >= 3
 & MatrixSplit == "Divided"
 & MatrixFec == "Yes"
@@ -71,7 +73,7 @@ comadre_sub <- subset(
 	& check_singular_U == FALSE 
 	& check_component_sum == TRUE 
 	& check_ergodic == TRUE 
- 	& MatrixComposite == "Individual" 
+# 	& MatrixComposite == "Individual"  # REMOVED in 20/01/2025
 & StudyDuration >= 3
 & MatrixSplit == "Divided"
 & MatrixFec == "Yes"

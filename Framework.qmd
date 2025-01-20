@@ -17,7 +17,7 @@ editor: visual
 toc: true
 toc-location: left
 execute:
-  cache: false        #Chck if it is always works well
+  cache: true        #Chck if it is always works well
 knitr:
   opts_chunk:
     comment: "#>"
@@ -28,7 +28,7 @@ tags:
   - Demographic buffering
 ---
 
-```{css, echo = FALSE}
+```{css, echo = FALSE, title="Determine table width and size in Quarto"}
 .output {
 max-height: 500px;
 overflow-y: scroll;
@@ -49,7 +49,7 @@ Intermediary code and data steps are sourced along the framework Intermediary co
 
 ## Settings
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, title="packages, cleaning and directory setting"}
 #Packages
 library(tidyverse)	#v2.0.0
 library(popbio)		#v2.7		
@@ -74,16 +74,16 @@ rm(list=ls())   #Cleam memory
 gc()            #Clean memory
 
 
-DataDir<-"/Data"
+DataDir<-"Data"
 ```
 
-```{r include=FALSE}
+```{r include=FALSE, title="kableExtra package for better presentation"}
 library(kableExtra)
 ```
 
 ## Session Info and loaded packages
 
-```{r echo=FALSE}
+```{r echo=FALSE, title="SessionInfo for replicability"}
 
 sessionInfo()
 
@@ -115,12 +115,12 @@ Produce two datasets:
 2.  `supertree`
     -   Extract supertree from MOSAIC database (Bernard et al. 2023 Scientific Data).
 
-```{r eval=FALSE, include=TRUE}
+```{r eval=FALSE, include=TRUE, title="Cleaning and data selection"}
 source("1 - Data cleaning and selection.R")
 #file.edit("1 - Data cleaning and selection.R")
 ```
 
-```{r}
+```{r, title="Metadata creation"}
 
 # Load cleaned data
 CleanData<-readRDS("Data/CleanData.RDS")
@@ -141,10 +141,10 @@ rm(CleanData)	#Remove non-used data
 
 ```
 
-```{r}
+```{r, title="Metadata overview"}
 MetadataFinal%>% kable %>%
   kable_styling("striped", full_width = F) %>% 
- scroll_box(width = "500px", height = "200px")
+ scroll_box(width = "700px", height = "200px")
 ```
 
 # Step 2 - Life history traits
@@ -162,14 +162,14 @@ Life-history metrics calculated
 
 Scripts available in `2 - Life history traits calculation.R` produces dataset `LHtraits.RDS` which is ready for the analyses
 
-```{r eval=FALSE, include=TRUE}
+```{r eval=FALSE, include=TRUE,title="Life history calculation"}
 source("2 - Life history traits calculation.R")
 # file.edit("2 - Life history traits calculation.R")
 ```
 
 Load life-history traits data and remove outliers outliers using
 
-```{r}
+```{r,title="Loading life history data already calculated"}
 LHtraits<-readRDS("Data/LHtraits.RDS")
 spLHmat<-LHtraits%>%
 	filter(is.outlier=="FALSE")%>%
@@ -178,7 +178,7 @@ column_to_rownames(var = "ID")
 
 ```
 
-```{r echo=FALSE}
+```{r echo=FALSE,title="Life history overview - table"}
 spLHmat%>% kable %>%
   kable_styling("striped", full_width = T) %>% 
  scroll_box(width = "500px", height = "200px")
@@ -207,7 +207,7 @@ Data come from Chelsacruts. An intermediary dataset containing list for all clim
 
 [^1]: Example of link to Chelsacruts climatic layers https://os.zhdk.cloud.switch.ch/envicloud/chelsa/chelsa_V1/chelsa_cruts/prec/CHELSAcruts_prec_10_1901_V.1.0.tif
 
-```{r eval=FALSE, include=TRUE}
+```{r eval=FALSE, include=TRUE, title="Chelsa data extraction"}
 #source("3a - Climatic data extraction.R")
 #file.edit("3a - Climatic data extraction.R")
 ```
@@ -220,14 +220,14 @@ Data come from Chelsacruts. An intermediary dataset containing list for all clim
 
 Produces the intermediary dataset `climate_df.RDS`
 
-```{r eval=FALSE, include=TRUE}
+```{r,title="Load already extracted climatic data"}
 #source("3b - Climatic variables calculation.R")
 #file.edit("3b - Climatic variables calculation.R")
 climate_df<-readRDS("Data/climate_df.RDS")
 
 ```
 
-```{r}
+```{r,title="Climatic data overview - table"}
 climate_df %>% kable %>%
   kable_styling("striped", full_width = F) %>% 
  scroll_box(width = "500px", height = "200px")
@@ -236,8 +236,8 @@ climate_df %>% kable %>%
 # Step 4 - Summarising life-history traits and climatic variables in their respectives Principal Component Analysis
 
 
-## Fast-slow continuum
-```{r}
+## 4.1. Life-history PCA
+```{r,title="Life-history PCA"}
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
 # LHpca - Map variables
@@ -268,6 +268,92 @@ filter(complete.cases(.))
 ```
 
 
+## 4.2a. Environmental PCA
+```{r,title="Environmental PCA"}
+climate_df%>%select(-ID)%>%cor()%>%corrplot::corrplot()
+
+# Produce the climatic/environmental PCA
+ClimPCA<-climate_df%>%
+mutate_at(vars(-c(ID)),scale)%>%
+column_to_rownames("ID")%>%
+#cor(.)%>%corrplot::corrplot(.)
+PCA(.,graph=F,scale=FALSE)
+
+ClimPCA$ind$coord
+
+cowplot::plot_grid(nrow=1,
+cowplot::plot_grid(ncol=1,
+fviz_eig(ClimPCA)+theme_bw(base_size=14),
+fviz_pca(ClimPCA, geom=c("point"))+theme_bw(base_size=14)),
+ClimPCA$var$cor%>%ggcorrplot::ggcorrplot(method = "circle")+theme_bw(base_size=14)+
+  theme(axis.text.x=element_text(angle=75,hjust=1)))+
+coord_fixed(ratio=.60)
+
+#ggsave(file="Figures/PCAEnv.svg")
+
+
+ClimPCA$ind$coord
+
+dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
+
+
+```
+### 4.2b Mapping climatic axes
+
+
+```{r, title="Mapping climatic data - Supplementary material production"}
+Plot_clim<-Metadata%>%dplyr::select(.,c(ID,Lat,Lon))%>%
+distinct(.,.keep_all=T)%>%
+left_join(.,
+data.frame(ClimPCA$ind$coord)%>%rownames_to_column(.,var="ID"),
+by="ID")%>%
+filter(complete.cases(.))%>%
+mutate(across(Dim.1:Dim.3,scales::rescale,to=c(0,1)))
+
+#Plot map
+world <- map_data("world")
+
+gmap<-ggplot() +
+geom_map(
+    data = world, map = world,
+    aes(long, lat, map_id = region),
+    color = "grey50", fill = "grey95", linewidth= 0.05)
+
+gmap +
+ geom_point(
+    data = left_join(Plot_clim,distinct(MetadataClean,ID,.keep_all=T)%>%select(ID,Kingdom)),
+    aes(x=Lon, y=Lat, fill = Dim.1,stroke=.3,size=Dim.2,shape=Kingdom))+
+scale_shape_manual(values=c(23,21))+
+scale_fill_viridis(option="magma")+
+scale_size(range = c(1.5, 5))+
+ theme_void()
+
+```
+# 5. Calculate demographic buffering from lower level vital rates
+
+Source mainfunction used in the calculation of	stochastic elasticities within respect to variance of lower level vital rates
+
+- This script creates the following functions:
+  1. "my.vitalRatePerturbation": Produce the stochasticity elasticity with respect to variance.
+  2. "array_to_matrix": Ancilliary function
+
+
+```{r}
+source("MainFunction - Stochastic elasticities of variance lower level.R")
+```
+
+
+> EXAMPLE: Case where shrinking is possible in Animal
+ Alternation between reproductive non-reproductive stage
+ Reproductive estage <--> non-reproductive stage
+>```
+>filter(Metadata,ID=="Urs2.183_726")$mat
+>lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matA)
+>my.vitalRatePerturbation(
+>lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matU),
+>lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matF),
+>lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))
+>```
 
 
 

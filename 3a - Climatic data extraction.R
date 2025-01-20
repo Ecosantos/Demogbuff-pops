@@ -307,11 +307,6 @@ print(i)}
 #=================================================================
 #	CHECK VALIDITY OF DATA EXTRACTION: PROBLEMS WITH BUFFERING
 #=================================================================
-X<-terra::rast(file.choose())
-plot(X)
-points(AllAnimalsFitted%>%select(Lon,Lat),pch=21,col="blue",cex=1.1)
-points(TESTE%>%select(Lon,Lat),pch=16,col="red")
-
 AllAnimalsFitted<-MetadataClean%>%left_join(.,Metadata,by="ID")%>%
 distinct(ID,.keep_all=TRUE)%>%
 filter(Kingdom.x=="Animalia")%>%
@@ -325,3 +320,7 @@ Metadata%>%select(ID,Lat,Lon),
 by="ID")%>%
 distinct(ID,.keep_all=TRUE)
 
+X<-terra::rast(file.choose())
+plot(X)
+points(AllAnimalsFitted%>%select(Lon,Lat),pch=21,col="blue",cex=1.1)
+points(TESTE%>%select(Lon,Lat),pch=16,col="red")
