@@ -1,5 +1,11 @@
+rm(list=ls())
+install.packages("tidyverse")
+install.packages("terra")
+install.packages("openxlsx")
+
 library(tidyverse)
 library(terra)
+library(openxlsx)
 
 dir.create(file.path("Data/ChelsacrutsData/Tmax"), showWarnings = FALSE)
 dir.create(file.path("Data/ChelsacrutsData/Tmin"), showWarnings = FALSE)
