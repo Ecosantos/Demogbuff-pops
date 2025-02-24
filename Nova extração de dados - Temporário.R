@@ -5,6 +5,12 @@ library(tidyverse)
 library(terra)
 
 
+
+linkMetadata<- "https://github.com/Ecosantos/Demogbuff-pops/raw/refs/heads/main/Data/CleanData.RDS"
+
+CleanData<- readRDS(url(linkMetadata, method="libcurl"))
+TESTE
+
 # LOAD POPULATION TO HAVE DATA EXTRACTED
 CleanData<-readRDS("Data/CleanData.RDS")
 
