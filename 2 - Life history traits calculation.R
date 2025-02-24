@@ -133,7 +133,7 @@ rownames_to_column(var = "ID")
 #				EXPORT
 #==================================================================
 #Save LIFE HISTORY TRAITS
-#saveRDS(LHtraits, paste0(DataDir,"/LHtraits.RDS"))
+#saveRDS(LHtraits, "Data/LHtraits.RDS")
 
 
 

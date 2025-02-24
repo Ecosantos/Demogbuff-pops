@@ -65,9 +65,9 @@ cbind(unlist(loadedNamespaces()),
 #			SETTINGS
 #==================================================================
 #Directory
-setwd("C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops")
+#setwd("C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops")
 
-DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops/Data"
+#DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops/Data"
 
 #==================================================================
 #		COMPADRE, COMADRE and MOSAIC 
@@ -82,8 +82,8 @@ DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimen
 #		Extract supertree from MOSAIC database (Bernard et al. 2023 Scientific Data).
 #==================================================================
 # Load cleaned data
-CleanData<-readRDS(paste0(DataDir,"/CleanData.RDS"))
-supertree<-readRDS(paste0(DataDir,"/supertree.RDS"))
+CleanData<-readRDS("Data/CleanData.RDS")
+supertree<-readRDS("Data/supertree.RDS")
 
 Metadata<-CleanData$Metadata
 MetadataClean<-CleanData$MetadataClean

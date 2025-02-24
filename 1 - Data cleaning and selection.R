@@ -33,14 +33,6 @@ comadre_flags <- cdb_flag(comadre)
 #---------------------------------------------
 #Add ID for each study
 #---------------------------------------------
-comadre_flags<-comadre_flags%>%
-mutate(StudyID=cdb_id_studies(comadre_flags))%>%
-mutate(SpeciesAuthor2=str_replace_all(SpeciesAuthor, "_", ""))%>%
-group_by(SpeciesAuthor2,StudyID,Lat,Lon)%>%
-mutate(Pop=cur_group_id())%>%
-mutate(ID=paste0(abbreviate(SpeciesAuthor2,dot = TRUE),StudyID,"_",Pop))%>%
-ungroup()%>%select(-SpeciesAuthor2)
-
 compadre_flags<-compadre_flags%>%
 mutate(StudyID=cdb_id_studies(compadre_flags))%>%
 mutate(SpeciesAuthor2=str_replace_all(SpeciesAuthor, "_", ""))%>%
@@ -48,6 +40,15 @@ group_by(SpeciesAuthor2,StudyID,Lat,Lon)%>%
 mutate(Pop=cur_group_id())%>%
 mutate(ID=paste0(abbreviate(SpeciesAuthor2,dot = TRUE),StudyID,"_",Pop))%>%
 ungroup()%>%select(-SpeciesAuthor2)
+
+comadre_flags<-comadre_flags%>%
+  mutate(StudyID=cdb_id_studies(comadre_flags))%>%
+  mutate(SpeciesAuthor2=str_replace_all(SpeciesAuthor, "_", ""))%>%
+  group_by(SpeciesAuthor2,StudyID,Lat,Lon)%>%
+  mutate(Pop=cur_group_id())%>%
+  mutate(ID=paste0(abbreviate(SpeciesAuthor2,dot = TRUE),StudyID,"_",Pop))%>%
+  ungroup()%>%select(-SpeciesAuthor2)
+
 
 #---------------------------------------------
 # Subset relevant (adequated) data 
@@ -59,7 +60,7 @@ compadre_sub <- subset(
 	& check_singular_U == FALSE 
 	& check_component_sum == TRUE 
 	& check_ergodic == TRUE 
-# 	& MatrixComposite == "Individual" # REMOVED in 20/01/2025
+ 	& MatrixComposite == "Individual" 
 & StudyDuration >= 3
 & MatrixSplit == "Divided"
 & MatrixFec == "Yes"
@@ -73,7 +74,7 @@ comadre_sub <- subset(
 	& check_singular_U == FALSE 
 	& check_component_sum == TRUE 
 	& check_ergodic == TRUE 
-# 	& MatrixComposite == "Individual"  # REMOVED in 20/01/2025
+ 	& MatrixComposite == "Individual"  # REMOVED in 20/01/2025
 & StudyDuration >= 3
 & MatrixSplit == "Divided"
 & MatrixFec == "Yes"
@@ -142,13 +143,13 @@ supertree<-ape::bind.tree(mosaic@phylogeny$animalPhylogeny,
 
 #Save Metadata and Metadata Clean
 Metadatas = list(Metadata= Metadata, MetadataClean=MetadataClean)
-#saveRDS(Metadatas , paste0(DataDir,"/CleanData.RDS"))
+#saveRDS(Metadatas , "Data/CleanData.RDS")
 
 #Save mosaic rethrived data 
-#saveRDS(mosaic, paste0(DataDir,"/mosaicdata.RDS"))
+#saveRDS(mosaic, "Data/mosaicdata.RDS")
 
 #Save mosaic phylogenies merged
-#saveRDS(supertree, paste0(DataDir,"/supertree.RDS"))
+#saveRDS(supertree, "Data/supertree.RDS")
 
 
 
