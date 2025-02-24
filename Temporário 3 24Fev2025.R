@@ -68,7 +68,14 @@ Data_point<-terra::project(Data_point, crs(sampleraster))
 # Check extraction
 #=====================================================================================================
 
-terra::extract(sampleraster, Data_point, na.rm=TRUE,bind=T)[,4]
+Data_point_example<-terra::extract(sampleraster, Data_point, na.rm=TRUE,bind=T)
+
+
+#Fix population ID
+Climate_dataID<-data.frame(
+  ID=Data_point_example$ID,
+  IDindex=terra::extract(sampleraster, Data_point, na.rm=TRUE,bind=F)[,1])
+  
 
 # Once checked, remove file to avoid problems with GITHUB
 # Github doesn't work well with files close to 100mb in a standard account
@@ -116,7 +123,7 @@ destfile<-NULL
 
 for( i in 1:dim(Tmin_df)[1]){
   #Determine a name for raster file
-  destfile = paste0("CHELSA_tmin_m",
+  destfile = paste0("Data/ChelsacrutsData/Tmin/CHELSA_tmin_m",
                     Tmin_df$Month[i],"y",Tmin_df$Year[i],".tif")
   #Download raster
   download.file(Tmin_df$Link[i],destfile,mode="wb")
@@ -127,9 +134,9 @@ for( i in 1:dim(Tmin_df)[1]){
   file.remove(destfile)
 }
 
-#saveRDS(Tmin_df_out,file="MinTemperatureChelsa_complete_04Jun23.rds")
+colnames(Tmin_df_out)<-Climate_dataID$ID
 
-dir("Data/ChelsacrutsData")
+#saveRDS(Tmin_df_out,file="Data/ChelsacrutsData/MinTemperatureChelsa.rds")
 
 
 #----------------------------------------------------------------------------------------
@@ -140,7 +147,7 @@ chelsarast<-destfile<-NULL
 
 for( i in 1:dim(Tmax_df)[1]){
   #Determine a name for raster file
-  destfile = paste0("CHELSA_tmax_m",
+  destfile = paste0("Data/ChelsacrutsData/CHELSA_tmax_m",
                     Tmax_df$Month[i],"y",Tmax_df$Year[i],".tif")
   #Download raster
   download.file(    Tmax_df$Link[i],destfile,mode="wb")
@@ -152,8 +159,8 @@ for( i in 1:dim(Tmax_df)[1]){
   file.remove(destfile)
 }
 
-#saveRDS(Tmin_df_out,file="MinTemperatureChelsa_complete_04Jun23.rds")
-
+colnames(Tmax_df_out)<-Climate_dataID$ID
+saveRDS(Tmax_df_out,file="Data/ChelsacrutsData/MaxTemperatureChelsa.rds")
 
 
 #----------------------------------------------------------------------------------------
@@ -163,18 +170,19 @@ chelsarast<-destfile<-NULL
 
 for( i in 1:dim(Prec_df)[1]){
   #Determine a name for raster file
-  destfile = paste0("CHELSA_prec_m",
+  destfile = paste0("Data/ChelsacrutsData/CHELSA_prec_m",
                     Prec_df$Month[i],"y",Prec_df$Year[i],".tif")
   #Download raster
-  download.file(    Tmin_df$Link[i],destfile,mode="wb")
+  download.file(    Prec_df$Link[i],destfile,mode="wb")
   #Routine
   chelsarast<-terra::rast(destfile)# Open raster
-  Tmin_df_out[i,]<-terra::extract(chelsarast, Data_point, na.rm=TRUE)[,2] #Extract values
+  Prec_df_out[i,]<-terra::extract(chelsarast, Data_point, na.rm=TRUE)[,2] #Extract values
   #Delete raster  
   file.remove(destfile)
 }
 
-#saveRDS(Tmin_df_out,file="MinTemperatureChelsa_complete_04Jun23.rds")
+colnames(Prec_df_out)<-Climate_dataID$ID
+saveRDS(Prec_df_out,file="Data/ChelsacrutsData/PrecChelsa.rds")
 
 
 TESTE<-readRDS(file.choose())
