@@ -95,7 +95,7 @@ MedatadaFinal<-MedatadaFinal%>%
 			Metadata%>%select(ID,StudyStart, StudyDuration, StudyEnd)%>%distinct(),
 				by="ID")
 
-rm(CleanData)	#Remove non-used data
+rm(CleanData)	#Remove non-used data to improve memory usage
 
 #==================================================================
 # 			LIFE HISTORY TRAITS
@@ -106,7 +106,7 @@ rm(CleanData)	#Remove non-used data
 # Produce dataset LHtraits.RDS:
 # 	- Calculate life history traits and detect outliers
 #==================================================================
-LHtraits<-readRDS(paste0(DataDir,"/LHtraits.RDS"))
+LHtraits<-readRDS("Data/LHtraits.RDS")
 
 #Filter outliers
 spLHmat<-LHtraits%>%
@@ -153,7 +153,7 @@ filter(complete.cases(.))
 #		Extract and summarise climatic information
 #----------------------------------------------------------------------------
 # Two scripts are necessary :
-# 3a - Climatic data extraction.R
+# 3a - Climatic data extraction.py
 #       - Climatic Download data and data extraction from CHELSA
 #	  - Because data download and information extraction is quite time consuming:
 #		- Intermediary datasets are produced for each variable: Tmin, Tmax, Precipitation
@@ -162,7 +162,7 @@ filter(complete.cases(.))
 #	  - Produce final dataset to analyse: "climate_df.RDS"
 #	  - Environmental trend, amplitude, and stochasticisticy
 #============================================================================
-climate_df<-readRDS(paste0(DataDir,"/climate_df.RDS"))
+climate_df<-readRDS("Data/climate_df.RDS")
 
 climate_df%>%select(-ID)%>%cor()%>%corrplot::corrplot()
 
@@ -762,8 +762,8 @@ phylo3
 #-----------------------------------------------------------------------
 # Include DOI to retrive full reference list of studies used
 #-----------------------------------------------------------------------
-load(paste0(DataDir,"/COMADRE_v.4.23.3.1.RData"))
-load(paste0(DataDir,"/COMPADRE_v.6.23.5.0.RData"))
+load("Data/COMADRE_v.4.23.3.1.RData")
+load("Data/COMPADRE_v.6.23.5.0.RData")
 
 compadre <- as_cdb(compadre)
 compadre$StudyID<-cdb_id_studies(compadre)
