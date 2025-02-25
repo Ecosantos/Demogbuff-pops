@@ -1,10 +1,10 @@
-###########################################################
+#'##########################################################
 #	DEMOGRAPHIC BUFFERING CONTINUUM 
 #		 plants and animals
 #		 by Gabriel Santos
 #	contact by ssantos.gabriel@gmail.com
 #		 	16 September 2024
-###########################################################
+#'##########################################################
 
 set.seed(1)
 
@@ -36,9 +36,9 @@ library(MCMCglmm)		#v2.35
 rm(list=ls())
 
 
-#==================================================================
-#	SessionInfo and package versions
-#==================================================================
+#'==================================================================
+#	SessionInfo and package versions ------
+#'==================================================================
 #Check package versions
 cbind(unlist(loadedNamespaces()),
   unlist(lapply(
@@ -46,9 +46,9 @@ cbind(unlist(loadedNamespaces()),
 		as.character)))%>%
 		data.frame()%>%arrange(-desc(X1))
 
-#==================================================================
-#			README
-#==================================================================
+#'==================================================================
+#			README -----
+#'==================================================================
 # The following script provide the general framework used to analyse
 # demographic buffering continuum in Santos et al. in review:
 # Population responses to environmental stochasticity are primarily driven by survival-reproduction trade-offs and mediated by aridity
@@ -61,18 +61,18 @@ cbind(unlist(loadedNamespaces()),
 #	4 - Analyses with MCMCglmm 
 #	5 - Core function: Stochastic elasticities of variance
 
-#==================================================================
-#			SETTINGS
-#==================================================================
+#'==================================================================
+#			SETTINGS    ------
+#'==================================================================
 #Directory
 #setwd("C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops")
 
 #DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops/Data"
 
-#==================================================================
+#'==================================================================
 #		COMPADRE, COMADRE and MOSAIC 
-#		 DATA SELECTION AND CLEANING
-#------------------------------------------------------------------
+#		 DATA SELECTION AND CLEANING ------
+#'------------------------------------------------------------------
 # Script avaliable in "1 - Data cleaning and selection.R"
 #	file.edit("1 - Data cleaning and selection.R")
 # Produce two datasets:
@@ -80,7 +80,7 @@ cbind(unlist(loadedNamespaces()),
 #		Filter matrix singularity, presence of fecundity, individual matrices only
 #	- supertree:
 #		Extract supertree from MOSAIC database (Bernard et al. 2023 Scientific Data).
-#==================================================================
+#'==================================================================
 # Load cleaned data
 CleanData<-readRDS("Data/CleanData.RDS")
 supertree<-readRDS("Data/supertree.RDS")
@@ -97,15 +97,15 @@ MedatadaFinal<-MedatadaFinal%>%
 
 rm(CleanData)	#Remove non-used data to improve memory usage
 
-#==================================================================
-# 			LIFE HISTORY TRAITS
+#'==================================================================
+# 			LIFE HISTORY TRAITS     -------
 #		Calculate life-history traits
-#------------------------------------------------------------------
+#'------------------------------------------------------------------
 # Script avaliable in "2 - Life history traits calculation.R"
 #	file.edit("2 - Life history traits calculation.R")
 # Produce dataset LHtraits.RDS:
 # 	- Calculate life history traits and detect outliers
-#==================================================================
+#'==================================================================
 LHtraits<-readRDS("Data/LHtraits.RDS")
 
 #Filter outliers
@@ -117,9 +117,9 @@ column_to_rownames(var = "ID")
 #Correlation plot - check colinearity
 #spLHmat%>%cor()%>%corrplot::corrplot(.,title="Check Colinerarity on LH traits")
 
-#============================================================================
-# 			FAST-SLOW CONTINUUM - PCA
-#============================================================================
+#'============================================================================
+# 			FAST-SLOW CONTINUUM - PCA -----
+#'============================================================================
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
 # LHpca - Map variables
@@ -148,20 +148,25 @@ rename_with(., ~ gsub("Dim", "LHAxis", .x, fixed = TRUE))%>%
 	select(ID,LHAxis.1:LHAxis.2))%>%
 filter(complete.cases(.))
 
-#============================================================================
-# 			CLIMATIC VARIABLES and ENVIRONMENTAL PCA
+#'============================================================================
+# 			CLIMATIC VARIABLES and ENVIRONMENTAL PCA ----
 #		Extract and summarise climatic information
-#----------------------------------------------------------------------------
-# Two scripts are necessary :
-# 3a - Climatic data extraction.py
-#       - Climatic Download data and data extraction from CHELSA
-#	  - Because data download and information extraction is quite time consuming:
-#		- Intermediary datasets are produced for each variable: Tmin, Tmax, Precipitation
-# 3b - Climatic variables calculation.R
-#       - Data summary and metrics extraction described in methods
+#'----------------------------------------------------------------------------
+# Extracted climatic data is available in three different files:
+#  1. MinTemperaturaChelsa.rds
+#  2. MaxTemperaturaChelsa.rds
+#  3. PrecChelsa.rds
+## Because data download and information extraction is quite time consuming:
+# A dedicated Jupyter notebook to run on Google Colab is provided in:
+#     - "ChelsaData Download and extraction - Google Colab.ipynb"
+#     - Run this Google Colab by typing in your brownser:
+#     - https://githubtocolab.com/Ecosantos/Demogbuff-pops/tree/IntegratingGoogleCollab
+# 
+# 3 - Climatic variables calculation.R use the already extracted climatic data to:
+#   - Data summary and metrics extraction described in methods
 #	  - Produce final dataset to analyse: "climate_df.RDS"
 #	  - Environmental trend, amplitude, and stochasticisticy
-#============================================================================
+#'============================================================================
 climate_df<-readRDS("Data/climate_df.RDS")
 
 climate_df%>%select(-ID)%>%cor()%>%corrplot::corrplot()
