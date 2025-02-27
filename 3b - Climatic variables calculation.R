@@ -39,9 +39,12 @@ mutate(values=paste0(month_ord,year))
 #============================================================================
 #		Opening climatic data
 #============================================================================
-TmaxChelsa<-readRDS(file="./Data/ChelsacrutsData/MaxTemperatureChelsa_01Aug23.rds")
-TminChelsa<-readRDS(file="./Data/ChelsacrutsData/MinTemperatureChelsa_01Aug23.rds")
-PrecipChelsa<-readRDS("./Data/ChelsacrutsData/PreciptationChelsa_01Aug23.rds")
+TmaxChelsa<-readRDS(file="./Data/ChelsacrutsData/MaxTemperatureChelsa.rds")
+TminChelsa<-readRDS(file="./Data/ChelsacrutsData/MinTemperatureChelsa.rds")
+PrecipChelsa<-readRDS("./Data/ChelsacrutsData/PrecChelsa.rds")
+
+PrecipChelsa%>%glimpse()
+TmaxChelsa
 
 climate_data_final<-TmaxChelsa%>%
 mutate(TMin=TminChelsa$TMin)%>%
