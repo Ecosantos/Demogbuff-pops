@@ -185,7 +185,7 @@ for( i in 1:dim(Prec_df)[1]){
   Prec_df_out[i,]<-terra::extract(chelsarast, Data_point, na.rm=TRUE)[,2] #Extract values
   #Delete raster  
   file.remove(destfile)
-}
+print(i)}
 
 colnames(Prec_df_out)<-Climate_dataID$ID
 saveRDS(Prec_df_out,file="Data/ChelsacrutsData/PrecChelsa.rds")

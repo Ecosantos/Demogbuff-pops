@@ -160,7 +160,7 @@ filter(complete.cases(.))
 # A dedicated Jupyter notebook to run on Google Colab is provided in:
 #     - "ChelsaData Download and extraction - Google Colab.ipynb"
 #     - Run this Google Colab by typing in your brownser:
-#     - https://githubtocolab.com/Ecosantos/Demogbuff-pops/tree/IntegratingGoogleCollab
+#     - https://githubtocolab.com/Ecosantos/Demogbuff-pops
 # 
 # 3 - Climatic variables calculation.R use the already extracted climatic data to:
 #   - Data summary and metrics extraction described in methods
