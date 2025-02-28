@@ -535,8 +535,10 @@ data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
 #-------------------------------------------------------------------------------------
 #	RUN GLMM ANALYSES WITH AND WITHOUT PHYLOGENETIC CORRECTION
-#
-file.edit("5 - MCMCglmm.R")
+ file.edit("5 - MCMCglmm.R")
+
+# Tidy GLMM outputs
+
 
 #--------------------------------------------------------------------------------------
 
