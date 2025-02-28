@@ -1,9 +1,10 @@
 set.seed(1)
+
 data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))
 
 data_model%>%glimpse()
-#Transform CUMULATIVE IN ABSOLUTE VALUE
 
+#Transform CUMULATIVE IN ABSOLUTE VALUE
 data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
 
@@ -16,7 +17,12 @@ traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"),
                         colnames(data_model), value=TRUE))
 
 
-traits<-traits_glmm
+
+readRDS()
+
+#------------------------------------------------------------------------------------------------------
+#	Define priors and GLMM iteractions
+#------------------------------------------------------------------------------------------------------
 
 prior_phylo<-list(G=list(G1=list(V=1,nu=0.02)),
    R=list(V=1,nu=0.02))
