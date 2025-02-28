@@ -1,6 +1,36 @@
+library(tidyverse)
+
+# Load cleaned data
+CleanData<-readRDS("Data/CleanData.RDS")
+supertree<-readRDS("Data/supertree.RDS")
+
+Metadata<-CleanData$Metadata
+MetadataClean<-CleanData$MetadataClean
+
+#Reduce data to improve redability
+MedatadaFinal<-MetadataClean%>%select(-c(lambda,Ecoregion,Binomial))
+MedatadaFinal<-MedatadaFinal%>%
+  left_join(.,
+            Metadata%>%select(ID,StudyStart, StudyDuration, StudyEnd)%>%distinct(),
+            by="ID")
+
+rm(CleanData)	#Remove non-used data to improve memory usage
+
+
+
 TmaxChelsa<-readRDS(file="./Data/ChelsacrutsData/MaxTemperatureChelsa.rds")
 TminChelsa<-readRDS(file="./Data/ChelsacrutsData/MinTemperatureChelsa.rds")
 PrecipChelsa<-readRDS("./Data/ChelsacrutsData/PrecChelsa.rds")
+
+# test
+TmaxChelsa[1:10,1:10]%>%glimpse()
+TminChelsa[1:10,1:10]%>%glimpse()
+PrecipChelsa[1:10,1:10]%>%glimpse()
+
+TmaxChelsa%>%dim()
+TminChelsa%>%dim()
+PrecipChelsa%>%dim()
+
 
 TESTE<-readRDS("C:\\Artigos e resumos publicados submetidos ideias\\3 - Em desenvolvimento\\Demographic buffering continuum - Plants and animals\\Data and script\\Data\\ChelsacrutsData\\PreciptationChelsa_01Aug23.rds")
 
@@ -8,10 +38,6 @@ TESTE<-readRDS("C:\\Artigos e resumos publicados submetidos ideias\\3 - Em desen
 TmaxChelsa<-TmaxChelsa%>%pivot_longer(!c(param,Month,Year),names_to="ID",values_to="TMax")%>%as_tibble()
 TminChelsa<-TminChelsa%>%pivot_longer(!c(param,Month,Year),names_to="ID",values_to="TMin")%>%as_tibble()
 PrecipChelsa<-PrecipChelsa%>%pivot_longer(!c(param,Month,Year),names_to="ID",values_to="Prec")%>%as_tibble()
-
-TmaxChelsa
-TminChelsa
-PrecipChelsa
 
 
 summary(PrecipChelsa)
