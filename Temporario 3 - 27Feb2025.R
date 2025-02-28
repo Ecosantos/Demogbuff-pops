@@ -106,7 +106,40 @@ for(i in 1:length(climate_vars$ID)){
   tempout<-My_tsvars(tempset$TMax,freq=12)
   climate_vars$Mean_trend_TMax[i]<-tempout$Mean_trend
   climate_vars$Stoch_noisesize_TMax[i]<-tempout$Stoch_noisesize#
-  #climate_vars$Ampli_season_TMax[i]<-tempout$Ampli_season
+  climate_vars$Ampli_season_TMax[i]<-tempout$Ampli_season
+  climate_vars$Ampli_trend_TMax[i]<-tempout$Ampli_trend			#Removed given high collinearity given the amplitude of seasons
+  #add verbose 
+  if (i == 1 || i%%25 == 0) {
+    message("Calculating mean Matrices", 
+            i)
+  }
+browser()
+  }
+
+climate_vars$ID2
+tempset
+
+tempset$TMax
+
+plot(tempset$TMax,type="b")
+
+
+unique(climate_vars$ID2)
+climate_vars%>%do.call(data.frame,.)%>%head()
+
+tempout<-tempset<-climate_vars<-NULL
+climate_vars$ID<-unique(climate_data_final$ID)
+
+#TEMP MAXIMUM
+for(i in 1:length(climate_vars$ID)){
+  climate_vars$ID2[i]<-climate_vars$ID[i]	#ID2 is created as a quality check. At the end ID must be ID=ID2
+  tempset<-subset(climate_data_final,ID==climate_vars$ID2[i])
+    #Jump timeseries that doesnt fit the condition of two years complete
+  #if(length(ts(tempset$TMax))< 2* 12) next		#Check if there is at least two years complete. This line make sure we are working with two years that might not hold in case when there is missing data in the last December - This is probably a temporary issue
+  tempout<-My_tsvars(tempset$TMax,freq=12)
+  climate_vars$Mean_trend_TMax[i]<-tempout$Mean_trend
+  climate_vars$Stoch_noisesize_TMax[i]<-tempout$Stoch_noisesize#
+  climate_vars$Ampli_season_TMax[i]<-tempout$Ampli_season
   climate_vars$Ampli_trend_TMax[i]<-tempout$Ampli_trend			#Removed given high collinearity given the amplitude of seasons
   #add verbose 
   if (i == 1 || i%%25 == 0) {
@@ -119,5 +152,44 @@ for(i in 1:length(climate_vars$ID)){
 unique(climate_vars$ID2)
 climate_vars%>%do.call(data.frame,.)%>%head()
 
+#TEMP MINIMUM
+for(i in 1:length(climate_vars$ID)){
+  climate_vars$ID2[i]<-climate_vars$ID[i]
+  tempset<-subset(climate_data_final,ID==climate_vars$ID2[i])
+  #Jump timeseries that doesnt fit the condition of two years complete
+  #if(length(ts(tempset$TMax))< 2* 12) next		#Check if there is at least two years complete. This line make sure we are working with two years that might not hold in case when there is missing data in the last December - This is probably a temporary issue
+  tempout<-My_tsvars(tempset$TMax,freq=12)
+  tempout<-My_tsvars(tempset$TMin,freq=12)
+  climate_vars$Mean_trend_TMin[i]<-tempout$Mean_trend			#Removed given the high collinearity with same information in TMax
+  climate_vars$Stoch_noisesize_TMin[i]<-tempout$Stoch_noisesize	#Removed given the high collinearity with same information in TMax
+  climate_vars$Ampli_season_TMin[i]<-tempout$Ampli_season
+  climate_vars$Ampli_trend_TMin[i]<-tempout$Ampli_trend		#Removed given high collinearity given the amplitude of seasons
+  #add verbose 
+  if (i == 1 || i%%25 == 0) {
+    message("Calculating mean Matrices", 
+            i)
+  }
+}
 
+#PRECIPTATION
+for(i in 1:length(climate_vars$ID)){
+  climate_vars$ID2[i]<-climate_vars$ID[i]
+  tempset<-subset(climate_data_final,ID==climate_vars$ID2[i])
+  #Jump timeseries that doesnt fit the condition of two years complete
+  #if(length(ts(tempset$TMax))< 2* 12) next		#Check if there is at least two years complete. This line make sure we are working with two years that might not hold in case when there is missing data in the last December - This is probably a temporary issue
+  tempout<-My_tsvars(tempset$TMax,freq=12)
+  tempout<-My_tsvars(tempset$Prec,freq=12)
+  climate_vars$Mean_trend_Prec[i]<-tempout$Mean_trend
+  climate_vars$Stoch_noisesize_Prec[i]<-tempout$Stoch_noisesize
+  climate_vars$Ampli_season_Prec[i]<-tempout$Ampli_season
+  climate_vars$Ampli_trend_Prec[i]<-tempout$Ampli_trend
+  #add verbose 
+  if (i == 1 || i%%25 == 0) {
+    message("Calculating mean Matrices", 
+            i)
+  }
+}
 
+climate_df<-do.call(data.frame,climate_vars)%>%select(-ID2)
+
+climate_df%>%head()
