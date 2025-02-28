@@ -55,23 +55,16 @@ cbind(unlist(loadedNamespaces()),
 #
 # Intermediary code and data steps are sourced along the framework
 # Intermediary code and data include:
-#	1 - Data cleaning and selection and its intermearidy data
+#	1 - Data cleaning and selection and its intermediary data
 #	2 - Life history traits calculation and its intermediary data
 #	3 - Climatic variables calculation
 #	4 - Analyses with MCMCglmm 
 #	5 - Core function: Stochastic elasticities of variance
 
-#'==================================================================
-#			SETTINGS    ------
-#'==================================================================
-#Directory
-#setwd("C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops")
-
-#DataDir<-"C:/Artigos e resumos publicados submetidos ideias/3 - Em desenvolvimento/Demographic buffering continuum - Plants and animals/Data and script/Demogbuff-pops/Data"
 
 #'==================================================================
 #		COMPADRE, COMADRE and MOSAIC 
-#		 DATA SELECTION AND CLEANING ------
+#	1.	 DATA SELECTION AND CLEANING ------
 #'------------------------------------------------------------------
 # Script avaliable in "1 - Data cleaning and selection.R"
 #	file.edit("1 - Data cleaning and selection.R")
@@ -81,6 +74,7 @@ cbind(unlist(loadedNamespaces()),
 #	- supertree:
 #		Extract supertree from MOSAIC database (Bernard et al. 2023 Scientific Data).
 #'==================================================================
+
 # Load cleaned data
 CleanData<-readRDS("Data/CleanData.RDS")
 supertree<-readRDS("Data/supertree.RDS")
@@ -98,7 +92,7 @@ MedatadaFinal<-MedatadaFinal%>%
 rm(CleanData)	#Remove non-used data to improve memory usage
 
 #'==================================================================
-# 			LIFE HISTORY TRAITS     -------
+# 2.			LIFE HISTORY TRAITS     -------
 #		Calculate life-history traits
 #'------------------------------------------------------------------
 # Script avaliable in "2 - Life history traits calculation.R"
@@ -108,7 +102,7 @@ rm(CleanData)	#Remove non-used data to improve memory usage
 #'==================================================================
 LHtraits<-readRDS("Data/LHtraits.RDS")
 
-#Filter outliers
+## .. Filter outliers ----
 spLHmat<-LHtraits%>%
 	filter(is.outlier=="FALSE")%>%
 		select(-c(is.outlier,mahal.dist))	%>%
@@ -118,7 +112,7 @@ column_to_rownames(var = "ID")
 #spLHmat%>%cor()%>%corrplot::corrplot(.,title="Check Colinerarity on LH traits")
 
 #'============================================================================
-# 			FAST-SLOW CONTINUUM - PCA -----
+# 2.2			FAST-SLOW CONTINUUM - PCA -----
 #'============================================================================
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
@@ -127,7 +121,7 @@ LHpca$eig%>%t()	#Explained variables
 LHpca$ind$coord	#Eigenvalues
 dimdesc(LHpca, axes = 1:3, proba = 0.05)
 
-#Check PCA
+# 2.2.Check PCA -----
 cowplot::plot_grid(nrow=1,
 cowplot::plot_grid(ncol=1,
 fviz_eig(LHpca)+theme_bw(base_size=14),
@@ -149,7 +143,7 @@ rename_with(., ~ gsub("Dim", "LHAxis", .x, fixed = TRUE))%>%
 filter(complete.cases(.))
 
 #'============================================================================
-# 			CLIMATIC VARIABLES and ENVIRONMENTAL PCA ----
+# 3.			CLIMATIC VARIABLES and ENVIRONMENTAL PCA ----
 #		Extract and summarise climatic information
 #'----------------------------------------------------------------------------
 # Extracted climatic data is available in three different files:
@@ -169,7 +163,38 @@ filter(complete.cases(.))
 #'============================================================================
 climate_df<-readRDS("Data/climate_df.RDS")
 
-climate_df%>%select(-ID)%>%cor()%>%corrplot::corrplot()
+
+## 3.1. Checking collinearity -------
+cor_matrix <- climate_df %>% select(-ID) %>% cor()
+diag(cor_matrix) <- NA  
+
+# Find values higher than 0.65
+high_corr <- which(abs(cor_matrix) > 0.65, arr.ind = TRUE)
+
+# Output to selection
+data.frame(
+  Var1 = rownames(cor_matrix)[high_corr[, 1]],
+  Var2 = colnames(cor_matrix)[high_corr[, 2]],
+  Correlation = cor_matrix[high_corr]
+) %>% arrange(desc(abs(Correlation)))  
+
+
+climate_df%>%select(-ID)%>%
+  select(-c(Ampli_season_TMax,
+            Ampli_season_TMin,
+            Ampli_season_Prec))%>%
+  cor()%>%corrplot::corrplot()
+
+## 3.2 Retaining climatic variables -----
+climate_df<-climate_df%>%select(
+  -c(Mean_trend_TMin,
+  Stoch_noisesize_TMin,
+  Stoch_noisesize_Prec,
+  Ampli_season_TMax,
+  Ampli_season_TMin,
+  Ampli_season_Prec))%>%
+  as_tibble()%>%glimpse()
+
 
 # Produce the climatic/environmental PCA
 ClimPCA<-climate_df%>%
@@ -178,7 +203,9 @@ column_to_rownames("ID")%>%
 #cor(.)%>%corrplot::corrplot(.)
 PCA(.,graph=F,scale=FALSE)
 
+ClimPCA%>%glimpse()
 ClimPCA$ind$coord
+ClimPCA$eig
 
 cowplot::plot_grid(nrow=1,
 cowplot::plot_grid(ncol=1,
