@@ -101,7 +101,7 @@ rm(CleanData)	#Remove non-used data to improve memory usage
 # 	- Calculate life history traits and detect outliers
 #'==================================================================
 LHtraits<-readRDS("Data/LHtraits.RDS")
-
+LHtraits
 ## .. Filter outliers ----
 spLHmat<-LHtraits%>%
 	filter(is.outlier=="FALSE")%>%
@@ -188,11 +188,8 @@ data.frame(
 ## 4.2 Retaining climatic variables -----
 climate_df<-climate_df%>%select(
   -c(Mean_trend_TMin,
-  Stoch_noisesize_TMin,
-  Stoch_noisesize_Prec,
-  Ampli_season_TMax,
-  Ampli_season_TMin,
-  Ampli_season_Prec))%>%
+  Stoch_noisesize_TMin,Stoch_noisesize_Prec,
+  Ampli_season_TMax,Ampli_season_TMin,Ampli_season_Prec))%>%
   as_tibble()
 
 
@@ -403,16 +400,6 @@ merged_data%>%glimpse()
 #Correlation plot
 merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
 
-#Populations by kingdom
-merged_data%>%select(Kingdom)%>%table()
-
-#Unique species by kingdom
-merged_data%>%
-distinct(SpeciesAccepted,.keep_all=T)%>%
-select(Kingdom)%>%table()
-
-# USED MPMs
-filter(Metadata, ID %in% merged_data$ID)$mat%>%length()
 
 #'========================================================================================
 #	BUILDING THE SUPER TREE AND MAKE SURE IT WORKS ON PHYLOGENETIC ANALYSES
@@ -475,6 +462,9 @@ final_data%>%select(Kingdom)%>%table()
 final_data%>%select(SpeciesAccepted,Kingdom)%>%
 distinct()%>%select(Kingdom)%>%table()
 
+# USED MPMs
+filter(Metadata, ID %in% final_data$ID)$mat%>%length()
+
 #'=======================================================================================
 #	DATASET PREPARATION AND GLMM ANALYSES -----
 #'=======================================================================================
@@ -497,16 +487,22 @@ PhyloSig_data_ALL<-PhyloSig_data%>%select(-Kingdom)
 subtree_Animals<-keep.tip(subtree, rownames(PhyloSig_data_ANIMALS))
 subtree_Plants<-keep.tip(subtree, rownames(PhyloSig_data_PLANTS))
 
-#--------------------------------------------------------------------------------------
-##	GLMM parameteres
-#--------------------------------------------------------------------------------------
+#'--------------------------------------------------------------------------------------
+##	GLMM parameteres --------------
+#'--------------------------------------------------------------------------------------
+
+final_data%>%glimpse()
 
 data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))
 
+data_model%>%glimpse()
 
-save(data_model,subtree_Animals,subtree_Plants,
-     file = "Data/GLMMdata.Rdata")
+#Transform CUMULATIVE IN ABSOLUTE VALUE
+data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
+
+#save(data_model,subtree_Animals,subtree_Plants,
+#     file = "Data/GLMMdata.Rdata")
 
 
 # Determines the fixed effect component
@@ -523,19 +519,17 @@ traits<-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"),
 
 data_model%>%glimpse()
 
-#Transform CUMULATIVE IN ABSOLUTE VALUE
-data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
 
-#--------------------------------------------------------------------------------------
+#'--------------------------------------------------------------------------------------
+##       Export GLMM DATA & accessory info ---- 
 ##	Export GLMM data and accessory information to run externally if necessary
 # I prefer to run with Google Colab Notebook to improve efficiency
 #--------------------------------------------------------------------------------------
 
-
 #-------------------------------------------------------------------------------------
 #	RUN GLMM ANALYSES WITH AND WITHOUT PHYLOGENETIC CORRECTION
- file.edit("5 - MCMCglmm.R")
+# file.edit("5 - MCMCglmm.R")
 
 # Tidy GLMM outputs
 

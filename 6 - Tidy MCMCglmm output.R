@@ -16,6 +16,12 @@ MCMCglmm_simple_animals<-MCMCglmm_output$Simple_models[[2]]
 
 rm(MCMCglmm_output)
 
+library(MuMIn)
+options(na.action = "na.fail")
+
+ms2 <- dredge(MCMCglmm_simple_animals[[1]], trace = F,REML = FALSE)
+
+formula(MCMCglmm_simple_animals[[1]])
 #======================================================================================================
 #	MERGING RESULTS
 #======================================================================================================
