@@ -185,7 +185,7 @@ Below The traceplot for MCMCglmm model Clim 12 (*Cumulative_SigElas \~ LHPC.1 \*
 
 -   Take home message: Model converge!
 
-```{r}
+```{r eval=F, echo=T}
 allChains <- mcmcr::as.mcmc(cbind(Clim12$Sol,Clim12$VCV))
 plotMCMC::plotTrace(allChains)
 ```
