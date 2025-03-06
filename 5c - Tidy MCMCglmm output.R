@@ -281,6 +281,47 @@ cowplot::plot_grid(
 
 #ggsave(file="Figures/MCMCglmm result.svg")
 
+
+#==========================================================================
+#	----- COMPARING PHYLOGENETIC SIGNAL ---------
+#==========================================================================
+
+Phylo_signal_df%>%glimpse()
+
+filter(Phylo_signal_df,Trait=="Reproduction" & Taxa=="Plants")$Values%>%range()
+
+
+Phylo_signal_df%>%
+  ggplot(.,aes(x=Trait))+
+  geom_bar()
+
+
+Phylo_summary <- Phylo_signal_df %>%
+  filter(Taxa=="Plants" & !(Trait %in% c("Cumulative","Buffmx")))%>%
+  group_by(Taxa,Trait) %>%
+  summarise(
+    MEDIAN = median(Values),
+    SD = sd(Values),
+    SE = SD / sqrt(n()) )%>%
+  mutate(Trait=factor(Trait,levels = c("Survival", "Growth", "Shrinking", "Reproduction", "Clonality")))
+
+
+ggplot(Phylo_summary, aes(x = Trait, y = MEDIAN, fill = Taxa)) +
+  geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
+  geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
+                  position = position_dodge(width = 0.9), color = "black", size = 0.8) +
+  scale_fill_manual(values=c("#1f9a59"))+
+  labs(x = NULL,
+       y = "Phylogenetic signal \n (Pagel's lambda)") +
+  theme_minimal(base_size=18)+
+  theme(legend.position="none",
+        panel.spacing = unit(2, "lines"))
+
+
+
+data_model
+
+
 #==========================================================================
 #	TRACEPLOT
 #==========================================================================

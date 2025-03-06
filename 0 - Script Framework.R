@@ -550,6 +550,9 @@ final_data_meta%>%glimpse()
 #-----------------------------------------------------------------------------------
 #	RANKING BUFFERING
 #-----------------------------------------------------------------------------------
+
+ToRank
+
 ToRank<-final_data%>%
 mutate(Cumulative_SigElas=abs(Cumulative_SigElas))%>%
 group_by(Kingdom)%>%
@@ -593,13 +596,6 @@ mutate(RelativeProp=(value/NewCumulative)*100)%>%
 left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
 
 
-#Relative contribution with Standard desviation
-RelContrib%>%
-group_by(name)%>%
-summarise(Relativemean=mean(RelativeProp),
-		SD=sd(RelativeProp),
-		n=n())
-
 #Relative contribution by organismType
 RelContrib%>%
 group_by(Kingdom,name,OrganismType)%>%
@@ -608,11 +604,60 @@ pivot_wider(names_from=name,values_from = Relativemean)%>%
 group_by(Kingdom)%>%group_split()
 
 #Relative contribution by kingdon
-RelContrib%>%
+RelContribtax<-RelContrib%>%
 group_by(name,Kingdom)%>%
 summarise(Relativemean=mean(RelativeProp),
 		SD=sd(RelativeProp),
 		n=n())
+
+
+RelContribtax%>%
+  group_by(Kingdom)%>%group_split()
+
+
+#====================================================================
+# -----   H2: Phylogenetic signal x E_sig -----
+#		TEST IF PHYLOGENETIC SIGNAL IS GREATER 
+#   IN VITAL RATES THAT CONTRIBUTE MOST
+#====================================================================
+
+RelContribtax
+
+Phylo_summary # Originally from 5c - Tidy MCMCglmm output
+
+
+# TESTING Relative contribution
+cor.test_df<-RelContribtax %>%
+  filter(Kingdom=="Plantae")%>%
+  mutate(name = gsub("_SigElas", "", name, fixed = TRUE))%>%
+  rename(Trait = name, E_sig = Relativemean)%>%
+  left_join(., Phylo_summary, by = "Trait")
+
+
+  cor.test(cor.test_df$E_sig,cor.test_df$MEDIAN,method="kendall")
+  
+plot(cor.test_df$E_sig~cor.test_df$MEDIAN)
+  
+# TESTING raw values - Marginally significant! 
+cor.test_df<-final_data%>%as_tibble()%>%
+  select(ID,Reproduction_SigElas:Survival_SigElas)%>%
+#  mutate_if(is.numeric,abs)%>%
+pivot_longer(!c(ID))%>%
+  left_join(.,MetadataClean%>%select(ID,Kingdom)%>%distinct(),by="ID")%>%
+  group_by(name,Kingdom)%>%
+  summarise(E_sig=mean(value),
+            SD=sd(value),
+            n=n())%>%
+  mutate(name = gsub("_SigElas", "", name, fixed = TRUE))%>%
+  rename(Trait = name)%>%
+  left_join(., Phylo_summary, by = "Trait")%>%
+  filter(Kingdom=="Plantae")
+
+cor.test_df
+cor.test(cor.test_df$E_sig,cor.test_df$MEDIAN,method="spearman")
+
+plot(cor.test_df$E_sig~cor.test_df$MEDIAN)
+
 #====================================================================
 #		FIGURE 1
 #====================================================================
