@@ -11,6 +11,8 @@
 # revealing these three potential relevant source of information #
 #'##########################################################
 
+set.seed(1)
+
 # Define necessary packages
 need_pkgs <- c("tidyverse", "plotMCMC", "mcmcr", "MuMIn", "MCMCglmm","MuMIn")
 

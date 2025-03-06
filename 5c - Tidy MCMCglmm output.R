@@ -1,27 +1,6 @@
-#'##########################################################
-#	  	 MODEL SELECTION
-# 	a sript for  the project
-#	DEMOGRAPHIC BUFFERING CONTINUUM in PLANTS AND ANIMALS
-#			 by Gabriel Santos
-# 	contact by ssantos.gabriel@gmail.com
-#			    05 March 2025
-#' ---------------------------------------------------------
-# Rationale: We must decide between better model composition
-# as Environmental PCA included until 3 axes 
-# revealing these three potential relevant source of information #
-#'##########################################################
-
-rm(list)
-
 library(tidyverse)
 library(tidybayes)	#v3.0.6
-library(ggridges)
 
-
-
-#======================================================================================================
-#	---- LOADING GLMM OUTPUTS -----
-#======================================================================================================
 
 MCMCglmm_output<-readRDS("Data/MCMCglmm_output.rds")
 
@@ -40,13 +19,15 @@ rm(MCMCglmm_output)
 library(MuMIn)
 options(na.action = "na.fail")
 
+ms2 <- dredge(MCMCglmm_simple_animals[[1]], trace = F,REML = FALSE)
 
+formula(MCMCglmm_simple_animals[[1]])
 #======================================================================================================
-#	---- DATA HARMONIZATION 	---- 
+#	MERGING RESULTS
 #======================================================================================================
 
 #------------------------------------------------------------------------------------------------------
-##			---- 	As summary 	---- 
+#			As summary
 #------------------------------------------------------------------------------------------------------
 Phylo_models_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) summary(inner_list))
 Phylo_models_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) summary(inner_list))
@@ -62,6 +43,18 @@ Simple_models_animals_coefs<-lapply(Simple_models_animals,function(inner_list) i
 Simple_models_plants_coefs<-lapply(Simple_models_plants,function(inner_list) inner_list[[5]])
 
 
+#---------------------------------------------------------------------------------------------------
+#			PHYLO 1
+#---------------------------------------------------------------------------------------------------
+Phylo_df<-lapply(Phylo_models_plants,function(inner_list) inner_list[[6]])%>%
+  Map(cbind, Trait = names(.),.)%>%do.call(rbind,.)%>%
+  as_tibble()%>%
+  mutate(across(c("post.mean":"eff.samp"),as.numeric))
+
+
+#---------------------------------------------------------------------------------------------------
+#Transform to data.frame
+#---------------------------------------------------------------------------------------------------
 Phylo_models_animals_coefs<-lapply(Phylo_models_animals_coefs,as.data.frame)
 Phylo_models_plants_coefs<-lapply(Phylo_models_plants_coefs,as.data.frame)
 
@@ -91,31 +84,29 @@ GLMMs_df<-rbind(Phylo_models_df_plants,Phylo_models_df_animals,
 colnames(GLMMs_df)<-c("Trait","Taxa","Model","Statistics","post.mean","low95","high95","eff.samp","pMCMC")
 
 
-#---------------------------------------------------------------------------------------------------
-# -----  SUMMARY SINTHESIS  -----  
-#---------------------------------------------------------------------------------------------------
+GLMMs_df%>%
+  mutate(sig=ifelse(pMCMC<=0.05,"Sig","Non-Sig"))%>%
+  filter(pMCMC<=0.1)%>%
+  filter(Statistics!="(Intercept)")%>%
+  group_by(Trait)%>%group_split()
+
 
 GLMMs_df_summary<-GLMMs_df%>%
   mutate(sig=ifelse(pMCMC<=0.05,"Sig","Non-Sig"))%>%
   filter(pMCMC<=0.1)%>%
-filter(Statistics!="(Intercept)")
+  filter(Statistics!="(Intercept)")
 
+GLMMs_df_summary%>%group_by(Trait)%>%group_split()
 
-# PLANTs x Cumulative only
 GLMMs_df_summary%>%
-  filter(Taxa=="Plants" & Trait == "Cumulative_SigElas")%>%
-  group_by(Trait)
+    filter(Taxa=="Plants" & Trait == "Cumulative_SigElas")%>%
+  group_by(Trait)%>%t()
 
 
-# By vital rates - Plants & Animals
-GLMMs_df_summary%>%
-  filter(Trait != "Cumulative_SigElas")%>%
-  group_by(Trait)%>%group_split()
 
-
-#======================================================================================================
-#			----- Posterior distributions -------
-#======================================================================================================
+#------------------------------------------------------------------------------------------------------
+#			As Raw posterior distribution
+#------------------------------------------------------------------------------------------------------
 Phylo_posterior_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) data.frame(inner_list$Sol,Taxa="Animals",Model="Phylo"))
 Phylo_posterior_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) data.frame(inner_list$Sol,Taxa="Plants",Model="Phylo"))
 
@@ -142,10 +133,6 @@ Posterior_data<-left_join(Posterior_data,
 
 Posterior_data%>%glimpse()
 
-
-#======================================================================================================
-#			----- GGPLOT - Posterior distribution -------
-#======================================================================================================
 ggplot_posteriors<-Posterior_data%>%
   filter(Trait!="Buffmx")%>%
   ggplot(.,aes(x=Variables,y=Values,group=Model))+
@@ -168,36 +155,15 @@ ggplot_posteriors<-Posterior_data%>%
 
 ggplot_posteriors$data%>%glimpse()
 
-ggplot_posteriors_vr<-ggplot_posteriors_cumu<-ggplot_posteriors
+ggplot_posteriors_cumu<-ggplot_posteriors
 
 ggplot_posteriors_cumu$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait == "Cumulative")
-ggplot_posteriors_vr<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait != "Cumulative")
 
-# All vital rates + cumulative + All taxa
-ggplot_posteriors
-
-#  cumulative  & Plants only
 ggplot_posteriors_cumu
-
-#  cumulative vr & Plants only
-ggplot_posteriors_cumu
-
-
-#---------------------------------------------------------------------------------------------------
-#			PHYLO 1
-# Don't remember why it is necessary
-# Exclude in next versions
-#---------------------------------------------------------------------------------------------------
-#Phylo_df<-lapply(Phylo_models_plants,function(inner_list) inner_list[[6]])%>%
-#  Map(cbind, Trait = names(.),.)%>%do.call(rbind,.)%>%
-#  as_tibble()%>%
-#  mutate(across(c("post.mean":"eff.samp"),as.numeric))
-
 #==========================================================================
-#	---- Estimating PHYLOGENETIC SIGNAL ---- 
+#	PHYLOGENETIC SIGNAL
 #==========================================================================
 
-# Create an axilliary function
 my.fake.lamb<-function(model){
   out =  model$VCV[,"phylo"]/
     (model$VCV[,"phylo"]+
@@ -209,9 +175,6 @@ my.fake.lamb<-function(model){
 }
 
 
-#InterestingVars<-c("Survival","Growth","Shrinking","Reproduction","Clonality","Buffmx","Cumulative")
-traits<-c("Reproduction_SigElas", "Growth_SigElas", "Shrinking_SigElas",  "Clonality_SigElas", "Survival_SigElas",
-          "Cumulative_SigElas","Buffmx")  
 
 lapply(MCMCglmm_phylo_animals,function(inner_list) inner_list$VCV)
 
@@ -240,6 +203,7 @@ Phylo_signal_df%>%
 
 
 
+library(ggridges)
 
 Phylo_signal_df%>%glimpse()
 
