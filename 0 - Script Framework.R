@@ -37,7 +37,7 @@ rm(list=ls())
 
 
 #'==================================================================
-#	SessionInfo and package versions ------
+#	0. SessionInfo and package versions ------
 #'==================================================================
 #Check package versions
 cbind(unlist(loadedNamespaces()),
@@ -47,7 +47,7 @@ cbind(unlist(loadedNamespaces()),
 		data.frame()%>%arrange(-desc(X1))
 
 #'==================================================================
-#			README -----
+#		1.	README -----
 #'==================================================================
 # The following script provide the general framework used to analyse
 # demographic buffering continuum in Santos et al. in review:
@@ -64,7 +64,7 @@ cbind(unlist(loadedNamespaces()),
 
 #'==================================================================
 #		COMPADRE, COMADRE and MOSAIC 
-#	1.	 DATA SELECTION AND CLEANING ------
+#	  2. DATA SELECTION AND CLEANING ------
 #'------------------------------------------------------------------
 # Script avaliable in "1 - Data cleaning and selection.R"
 #	file.edit("1 - Data cleaning and selection.R")
@@ -92,7 +92,7 @@ MedatadaFinal<-MedatadaFinal%>%
 rm(CleanData)	#Remove non-used data to improve memory usage
 
 #'==================================================================
-# 2.			LIFE HISTORY TRAITS     -------
+#   3. LIFE HISTORY TRAITS     -------
 #		Calculate life-history traits
 #'------------------------------------------------------------------
 # Script avaliable in "2 - Life history traits calculation.R"
@@ -101,7 +101,7 @@ rm(CleanData)	#Remove non-used data to improve memory usage
 # 	- Calculate life history traits and detect outliers
 #'==================================================================
 LHtraits<-readRDS("Data/LHtraits.RDS")
-
+LHtraits
 ## .. Filter outliers ----
 spLHmat<-LHtraits%>%
 	filter(is.outlier=="FALSE")%>%
@@ -112,7 +112,7 @@ column_to_rownames(var = "ID")
 #spLHmat%>%cor()%>%corrplot::corrplot(.,title="Check Colinerarity on LH traits")
 
 #'============================================================================
-# 2.2			FAST-SLOW CONTINUUM - PCA -----
+#   3.2	FAST-SLOW CONTINUUM - PCA -----
 #'============================================================================
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
@@ -143,7 +143,7 @@ rename_with(., ~ gsub("Dim", "LHAxis", .x, fixed = TRUE))%>%
 filter(complete.cases(.))
 
 #'============================================================================
-# 3.			CLIMATIC VARIABLES and ENVIRONMENTAL PCA ----
+#   4. CLIMATIC VARIABLES and ENVIRONMENTAL PCA ----
 #		Extract and summarise climatic information
 #'----------------------------------------------------------------------------
 # Extracted climatic data is available in three different files:
@@ -164,7 +164,7 @@ filter(complete.cases(.))
 climate_df<-readRDS("Data/climate_df.RDS")
 
 
-## 3.1. Checking collinearity -------
+## 4.1. Checking collinearity -------
 cor_matrix <- climate_df %>% select(-ID) %>% cor()
 diag(cor_matrix) <- NA  
 
@@ -178,22 +178,19 @@ data.frame(
   Correlation = cor_matrix[high_corr]
 ) %>% arrange(desc(abs(Correlation)))  
 
+# Plot all variables to visualize collinearity
+#climate_df%>%select(-ID)%>%
+#  select(-c(Ampli_season_TMax,
+#            Ampli_season_TMin,
+#            Ampli_season_Prec))%>%
+#  cor()%>%corrplot::corrplot()
 
-climate_df%>%select(-ID)%>%
-  select(-c(Ampli_season_TMax,
-            Ampli_season_TMin,
-            Ampli_season_Prec))%>%
-  cor()%>%corrplot::corrplot()
-
-## 3.2 Retaining climatic variables -----
+## 4.2 Retaining climatic variables -----
 climate_df<-climate_df%>%select(
   -c(Mean_trend_TMin,
-  Stoch_noisesize_TMin,
-  Stoch_noisesize_Prec,
-  Ampli_season_TMax,
-  Ampli_season_TMin,
-  Ampli_season_Prec))%>%
-  as_tibble()%>%glimpse()
+  Stoch_noisesize_TMin,Stoch_noisesize_Prec,
+  Ampli_season_TMax,Ampli_season_TMin,Ampli_season_Prec))%>%
+  as_tibble()
 
 
 # Produce the climatic/environmental PCA
@@ -223,9 +220,9 @@ ClimPCA$ind$coord
 dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
 
 
-#------------------------------------------------------------------------------
-#		Mapping climatic axes
-#------------------------------------------------------------------------------
+#'------------------------------------------------------------------------------
+##	4.3	Mapping climatic axes ----
+#'------------------------------------------------------------------------------
 Plot_clim<-Metadata%>%dplyr::select(.,c(ID,Lat,Lon))%>%
 distinct(.,.keep_all=T)%>%
 left_join(.,
@@ -254,8 +251,8 @@ scale_size(range = c(1.5, 5))+
 
 #ggsave(file="Figures/ClimMap_all_taxa2.svg")
 
-#============================================================================
-# 	CALCULATE DEMOGRAPHIC BUFFERING FROM LOWER LEVEL VITAL RATES
+#'============================================================================
+# 	5. CALCULATE DEMOGRAPHIC BUFFERING FROM LOWER LEVEL VITAL RATES -----
 #
 #  Source mainfunction used in the calculation of 
 #	stochastic elasticities within respect to variance of lower level vital rates
@@ -263,15 +260,15 @@ scale_size(range = c(1.5, 5))+
 # 	  - This script creates the following functions:
 #		1. "my.vitalRatePerturbation": Produce the stochasticity elasticity with respect to variance.
 #		2. "array_to_matrix": Ancilliary function
-#-----------------------------------------------------------------------------
+#'-----------------------------------------------------------------------------
 
 source("MainFunction - Stochastic elasticities of variance lower level.R")
 
-#---------------------------------------------------------------------------------------
+#'---------------------------------------------------------------------------------------
 # EXAMPLE: Case where shrinking is possible in Animal
 # Alternation between reproductive non-reproductive stage
 # Reproductive estage <--> non-reproductive stage
-#---------------------------------------------------------------------------------------
+#'---------------------------------------------------------------------------------------
 filter(Metadata,ID=="Urs2.183_726")$mat
 lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matA)
 
@@ -279,7 +276,7 @@ my.vitalRatePerturbation(
 lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matU),
 lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matF),
 lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))
-#---------------------------------------------------------------------------------------
+#'---------------------------------------------------------------------------------------
 
 # Organize unique ID to rethrive matrices to metadata after analyses
 uniqueID<-unique(Metadata$ID)
@@ -311,9 +308,9 @@ rm(temp)
 # Quantify the number of populations with timeseries longer than three
 unlist(MatRep)[unlist(MatRep)>2]%>%length()
 
-#---------------------------------------------------------------------------
+#'---------------------------------------------------------------------------
 #		Merge Demographic buffering calculations in a single Data frame
-#---------------------------------------------------------------------------
+#'---------------------------------------------------------------------------
 ElasSigVR_full<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
 Map(cbind, ID = names(.), .)%>%
 do.call(rbind,.)%>%
@@ -321,12 +318,12 @@ as_tibble()%>%
 pivot_wider(names_from = VR,values_from=c(Mean,SD))%>%
 filter(complete.cases(.))
 
-#----------
+#'----------
 #A simpler version is created without standard desviation
 # as standard desviation was not included in the model
 # The full version ("ElasSigVR_full") is still required to summary statistics below
 #	see RANKING BUFFERING
-#----------
+#'----------
 ElasSigVR_data<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
 Map(cbind, ID = names(.), .)%>%
 do.call(rbind,.)%>%
@@ -346,10 +343,10 @@ filter(complete.cases(.))
 
 
 
-#---------------------------------------------------------------------------
+#'---------------------------------------------------------------------------
 #		Final demographic buffering data preparation. 
 # Then, it will be ready for merging with climatic data and life history traits
-#---------------------------------------------------------------------------
+#'---------------------------------------------------------------------------
 databuff_data<-left_join(
 ElasSigVR_data%>%setNames(paste0(names(.),'_SigElas')),
 StochElasVR_data%>%setNames(paste0(names(.),'_Base')),
@@ -378,15 +375,17 @@ left_join(.,LHtraits,by="ID")%>%
 filter(complete.cases(.))%>%
 select(-"ID")%>%cor()%>%corrplot::corrplot()
 
-#========================================================================================
-#	MERGING ALL CLIMATIC + LIFE HISTORY + BUFFERING DATA
-#========================================================================================
+#'========================================================================================
+#	MERGING ALL CLIMATIC + LIFE HISTORY + BUFFERING DATA -----
+#'========================================================================================
 colnames(ClimPCA$ind$coord)<-gsub("Dim.", "ClimPC.", colnames(ClimPCA$ind$coord))
 colnames(LHpca$ind$coord)<-gsub("Dim.", "LHPC.", colnames(LHpca$ind$coord))
 
 LHpca$ind$coord%>%head()
 LHpca_axes12<-LHpca$ind$coord[,c(1,2)]%>%data.frame()%>%rownames_to_column("ID")
 ClimPCA_axes123<-ClimPCA$ind$coord[,c(1,2,3)]%>%data.frame()%>%rownames_to_column("ID")
+
+ClimPCA_axes123%>%glimpse()
 
 merged_data<-databuff_data%>%
 left_join(.,LHpca_axes12,by="ID")%>%
@@ -395,23 +394,16 @@ filter(complete.cases(.))%>%
 left_join(.,MetadataClean,by="ID")%>%
 distinct(ID,.keep_all=TRUE)
 
+
+merged_data%>%glimpse()
+
 #Correlation plot
 merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
 
-#Populations by kingdom
-merged_data%>%select(Kingdom)%>%table()
 
-#Unique species by kingdom
-merged_data%>%
-distinct(SpeciesAccepted,.keep_all=T)%>%
-select(Kingdom)%>%table()
-
-# USED MPMs
-filter(Metadata, ID %in% merged_data$ID)$mat%>%length()
-
-#========================================================================================
+#'========================================================================================
 #	BUILDING THE SUPER TREE AND MAKE SURE IT WORKS ON PHYLOGENETIC ANALYSES
-#========================================================================================
+#'========================================================================================
 #Make subtree
 sppINphylo<-unique(merged_data$Binomial)[unique(merged_data$Binomial)%in%supertree$tip]
 
@@ -435,20 +427,15 @@ subtree<-phytools::force.ultrametric(subtree, method="extend")
 identical(subtree,subtree_backup)
 all.equal.phylo(subtree,subtree_backup,use.edge.length=FALSE)
 
-#cowplot::plot_grid(
-#ggtree(supertree,layout="fan", branch.length = 'none'),
-#ggtree(supertree,layout="fan",branch.length=TRUE))
-
-
 is.rooted(subtree)
 is.binary(subtree)
 is.ultrametric(subtree)
 any(subtree$edge.length==0)
 subtree$edge.length[subtree$edge.length==0]
 
-#================================================================================
+#'================================================================================
 #		FINAL DATASETS AND PHYLOGENETIC ANALYSES
-#================================================================================
+#'================================================================================
 
 final_data<-merged_data%>%
 mutate(phylo=Binomial)%>%
@@ -461,8 +448,6 @@ data.frame()
 final_data%>%glimpse()
 
 final_data
-
-
 
 #Total populations
 final_data%>%dim()
@@ -477,9 +462,12 @@ final_data%>%select(Kingdom)%>%table()
 final_data%>%select(SpeciesAccepted,Kingdom)%>%
 distinct()%>%select(Kingdom)%>%table()
 
-#=======================================================================================
-#	DATASET PREPARATION AND GLMM ANALYSES
-#=======================================================================================
+# USED MPMs
+filter(Metadata, ID %in% final_data$ID)$mat%>%length()
+
+#'=======================================================================================
+#	DATASET PREPARATION AND GLMM ANALYSES -----
+#'=======================================================================================
 
 #Prepare dataset for phylogenetic analyses
 
@@ -495,25 +483,56 @@ PhyloSig_data_ANIMALS<-PhyloSig_data%>%filter(Kingdom=="Animalia")%>%select(-Kin
 PhyloSig_data_PLANTS<-PhyloSig_data%>%filter(Kingdom=="Plantae")%>%select(-Kingdom)
 PhyloSig_data_ALL<-PhyloSig_data%>%select(-Kingdom)
 
-#--------------------------------------------------------------------------------------
-#	GLMM parameteres
-#--------------------------------------------------------------------------------------
+
+subtree_Animals<-keep.tip(subtree, rownames(PhyloSig_data_ANIMALS))
+subtree_Plants<-keep.tip(subtree, rownames(PhyloSig_data_PLANTS))
+
+#'--------------------------------------------------------------------------------------
+##	GLMM parameteres --------------
+#'--------------------------------------------------------------------------------------
+
+final_data%>%glimpse()
+
+data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))
+
+data_model%>%glimpse()
+
+#Transform CUMULATIVE IN ABSOLUTE VALUE
+data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
+
+
+#save(data_model,subtree_Animals,subtree_Plants,
+#     file = "Data/GLMMdata.Rdata")
+
 
 # Determines the fixed effect component
-fixEffect<-fixEffect<-"~LHPC.1 * LHPC.2 + ClimPC.1 * ClimPC.2"
+fixEffect<-fixEffect<-"~LHPC.1 * LHPC.2 + ClimPC.1 * ClimPC.2 * ClimPC.3"
 
 # Determines all variables of interest to make multiple models
 InterestingVars<-c("Survival","Growth","Shrinking","Reproduction","Clonality","Buffmx","Cumulative")
 
 
-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"), 
-                        colnames(final_data), value=TRUE))
 
 
+traits<-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"), 
+                                   colnames(data_model), value=TRUE))
+
+data_model%>%glimpse()
+
+
+
+#'--------------------------------------------------------------------------------------
+##       Export GLMM DATA & accessory info ---- 
+##	Export GLMM data and accessory information to run externally if necessary
+# I prefer to run with Google Colab Notebook to improve efficiency
 #--------------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------------
 #	RUN GLMM ANALYSES WITH AND WITHOUT PHYLOGENETIC CORRECTION
-#
-file.edit("5 - MCMCglmm.R")
+# file.edit("5 - MCMCglmm.R")
+
+# Tidy GLMM outputs
+
 
 #--------------------------------------------------------------------------------------
 
