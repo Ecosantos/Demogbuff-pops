@@ -293,7 +293,7 @@ Check_traces<-function(X){
   op <- par(ask=TRUE)
   allChains <- NULL
   for(i in 1:length(X)){
-    allChains <-as.mcmc(cbind(X[[i]]$Sol,X[[i]]$VCV))
+    allChains <-coda::as.mcmc(cbind(X[[i]]$Sol,X[[i]]$VCV))
     plotMCMC::plotTrace(allChains,
                         main=X[[i]]$Fixed$formula,cex.main = .6)
     print ("Click on plot to continue")
@@ -307,55 +307,4 @@ Check_traces<-function(X){
 #Check_traces(MCMCglmm_simple_plants)
 #Check_traces(MCMCglmm_simple_animals)
 
-
-#==========================================================================
-#	PREDICTED x OBSERVED
-#==========================================================================
-#---------------------------------------------------------------------------
-#		PLOT PLANTS
-#---------------------------------------------------------------------------
-par(mfrow=c(2,7))
-TEMP_df<-TEMP_pred<-TEMP_obs<-NULL
-for ( i in 1:length(traits)){
-  TEMP_pred<-MCMCglmm_phylo_plants[[i]]%>%predict()%>%as.vector()
-  TEMP_obs<-subset(data_model,Kingdom=="Plantae")%>%select(traits[[i]])%>%as.matrix()
-  TEMP_df<-filter(data.frame(TEMP_pred,TEMP_obs=TEMP_obs[,1]),TEMP_obs<=quantile(TEMP_obs,0.975))
-  TEMP_df<-filter(TEMP_df,TEMP_obs >= quantile(TEMP_obs,0.25))
-  plot(TEMP_df$TEMP_pred~TEMP_df$TEMP_obs,main=traits[[i]])
-  abline(a=0,b=1)
-}
-
-for ( i in 1:length(traits)){
-  TEMP_pred<-MCMCglmm_simple_plants[[i]]%>%predict()%>%as.vector()
-  TEMP_obs<-subset(data_model,Kingdom=="Plantae")%>%select(traits[[i]])%>%as.matrix()
-  TEMP_df<-filter(data.frame(TEMP_pred,TEMP_obs=TEMP_obs[,1]),TEMP_obs<=quantile(TEMP_obs,0.975))
-  TEMP_df<-filter(TEMP_df,TEMP_obs >= quantile(TEMP_obs,0.25))
-  plot(TEMP_df$TEMP_pred~TEMP_df$TEMP_obs,main=traits[[i]])
-  abline(a=0,b=1)
-}
-
-
-
-#---------------------------------------------------------------------------
-#		PLOT PLANTS
-#---------------------------------------------------------------------------
-par(mfrow=c(2,7))
-TEMP_df<-TEMP_pred<-TEMP_obs<-NULL
-for ( i in 1:length(traits)){
-  TEMP_pred<-MCMCglmm_phylo_animals[[i]]%>%predict()%>%as.vector()
-  TEMP_obs<-subset(data_model,Kingdom=="Animalia")%>%select(traits[[i]])%>%as.matrix()
-  TEMP_df<-filter(data.frame(TEMP_pred,TEMP_obs=TEMP_obs[,1]),TEMP_obs<=quantile(TEMP_obs,0.975))
-  TEMP_df<-filter(TEMP_df,TEMP_obs >= quantile(TEMP_obs,0.25))
-  plot(TEMP_df$TEMP_pred~TEMP_df$TEMP_obs,main=traits[[i]])
-  abline(a=0,b=1)
-}
-
-for ( i in 1:length(traits)){
-  TEMP_pred<-MCMCglmm_simple_animals[[i]]%>%predict()%>%as.vector()
-  TEMP_obs<-subset(data_model,Kingdom=="Animalia")%>%select(traits[[i]])%>%as.matrix()
-  TEMP_df<-filter(data.frame(TEMP_pred,TEMP_obs=TEMP_obs[,1]),TEMP_obs<=quantile(TEMP_obs,0.975))
-  TEMP_df<-filter(TEMP_df,TEMP_obs >= quantile(TEMP_obs,0.25))
-  plot(TEMP_df$TEMP_pred~TEMP_df$TEMP_obs,main=traits[[i]])
-  abline(a=0,b=1)
-}
 
