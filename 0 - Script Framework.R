@@ -121,7 +121,7 @@ LHpca$eig%>%t()	#Explained variables
 LHpca$ind$coord	#Eigenvalues
 dimdesc(LHpca, axes = 1:3, proba = 0.05)
 
-# 2.2.Check PCA -----
+# 3.2.2. Check PCA -----
 cowplot::plot_grid(nrow=1,
 cowplot::plot_grid(ncol=1,
 fviz_eig(LHpca)+theme_bw(base_size=14),
@@ -185,7 +185,7 @@ data.frame(
 #            Ampli_season_Prec))%>%
 #  cor()%>%corrplot::corrplot()
 
-## 4.2 Retaining climatic variables -----
+## 4.2 Removing collinar climatic variables -----
 climate_df<-climate_df%>%select(
   -c(Mean_trend_TMin,
   Stoch_noisesize_TMin,Stoch_noisesize_Prec,
@@ -200,9 +200,6 @@ column_to_rownames("ID")%>%
 #cor(.)%>%corrplot::corrplot(.)
 PCA(.,graph=F,scale=FALSE)
 
-ClimPCA%>%glimpse()
-ClimPCA$ind$coord
-ClimPCA$eig
 
 cowplot::plot_grid(nrow=1,
 cowplot::plot_grid(ncol=1,
@@ -214,8 +211,6 @@ coord_fixed(ratio=.60)
 
 
 #ggsave(file="Figures/PCAEnv.svg")
-
-ClimPCA$ind$coord
 
 dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
 
@@ -312,9 +307,7 @@ unlist(MatRep)[unlist(MatRep)>2]%>%length()
 #		Merge Demographic buffering calculations in a single Data frame
 #'---------------------------------------------------------------------------
 ElasSigVR_full<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
-Map(cbind, ID = names(.), .)%>%
-do.call(rbind,.)%>%
-as_tibble()%>%
+Map(cbind, ID = names(.), .)%>% do.call(rbind,.)%>% as_tibble()%>%
 pivot_wider(names_from = VR,values_from=c(Mean,SD))%>%
 filter(complete.cases(.))
 
@@ -324,10 +317,9 @@ filter(complete.cases(.))
 # The full version ("ElasSigVR_full") is still required to summary statistics below
 #	see RANKING BUFFERING
 #'----------
+
 ElasSigVR_data<-lapply(ElasSigVR,rownames_to_column, var = "VR")%>%
-Map(cbind, ID = names(.), .)%>%
-do.call(rbind,.)%>%
-as_tibble()%>%
+Map(cbind, ID = names(.), .)%>% do.call(rbind,.)%>% as_tibble()%>%
 select(-SD)%>%				#Remove standard desviation
 pivot_wider(names_from = VR,values_from=Mean)%>%
 filter(complete.cases(.))
@@ -335,9 +327,7 @@ filter(complete.cases(.))
 
 StochElasVR_data<-lapply(StochElasVR,rownames_to_column, var = "VR")%>%
 Map(cbind, ID = names(.), .)%>%
-do.call(rbind,.)%>%
-as_tibble()%>%
-select(-SD)%>%
+do.call(rbind,.)%>% as_tibble()%>% select(-SD)%>%
 pivot_wider(names_from = VR,values_from=Mean)%>%
 filter(complete.cases(.))
 
@@ -351,8 +341,6 @@ databuff_data<-left_join(
 ElasSigVR_data%>%setNames(paste0(names(.),'_SigElas')),
 StochElasVR_data%>%setNames(paste0(names(.),'_Base')),
 by=c("ID_SigElas"="ID_Base"))
-
-databuff_data%>%glimpse()
 
 MPMinfo<-data.frame(
  Buffmx=unlist(Buffmx),
@@ -376,7 +364,7 @@ filter(complete.cases(.))%>%
 select(-"ID")%>%cor()%>%corrplot::corrplot()
 
 #'========================================================================================
-#	MERGING ALL CLIMATIC + LIFE HISTORY + BUFFERING DATA -----
+#	---- 6. MERGING CLIMATIC + LIFE HISTORY + BUFFERING DATA -----
 #'========================================================================================
 colnames(ClimPCA$ind$coord)<-gsub("Dim.", "ClimPC.", colnames(ClimPCA$ind$coord))
 colnames(LHpca$ind$coord)<-gsub("Dim.", "LHPC.", colnames(LHpca$ind$coord))
@@ -402,7 +390,8 @@ merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
 
 
 #'========================================================================================
-#	BUILDING THE SUPER TREE AND MAKE SURE IT WORKS ON PHYLOGENETIC ANALYSES
+#	  ---- 7. THE SUPER TREE ---- 
+# BUILT IT AND MAKE SURE IT WORKS ON PHYLOGENETIC ANALYSES
 #'========================================================================================
 #Make subtree
 sppINphylo<-unique(merged_data$Binomial)[unique(merged_data$Binomial)%in%supertree$tip]
@@ -434,7 +423,7 @@ any(subtree$edge.length==0)
 subtree$edge.length[subtree$edge.length==0]
 
 #'================================================================================
-#		FINAL DATASETS AND PHYLOGENETIC ANALYSES
+#		----- 8. FINAL DATASETS AND PHYLOGENETIC ANALYSES -----
 #'================================================================================
 
 final_data<-merged_data%>%
@@ -444,10 +433,6 @@ filter(inPhylo!=FALSE)%>%
 select(-inPhylo)%>%
 arrange(.,match(Binomial,subtree$tip))%>%
 data.frame()
-
-final_data%>%glimpse()
-
-final_data
 
 #Total populations
 final_data%>%dim()
@@ -466,45 +451,33 @@ distinct()%>%select(Kingdom)%>%table()
 filter(Metadata, ID %in% final_data$ID)$mat%>%length()
 
 #'=======================================================================================
-#	DATASET PREPARATION AND GLMM ANALYSES -----
+## -------	8.1 DATASET PREPARATION AND GLMM ANALYSES -----
 #'=======================================================================================
-
 #Prepare dataset for phylogenetic analyses
+final_data%>%
+  as_tibble()%>%
+  distinct(final_data$Binomial,.keep_all=TRUE)$Binomial%>%
+  column_to_rownames("Binomial")%>%
+  select(is.numeric,Kingdom)%>%
+  select(-c(Clonality_Base,Clonality_SigElas))
 
-PhyloSig_data<-final_data%>%
-as_tibble()%>%
-distinct(Binomial,.keep_all=TRUE)%>%
-column_to_rownames("Binomial")%>%
-select(is.numeric,Kingdom)%>%
-select(-c(Clonality_Base,Clonality_SigElas))
+#Prepare phylogeny with respective populations 
+subtree_Animals<-keep.tip(subtree, filter(final_data,Kingdom=="Animalia")$phylo)
+subtree_Plants<-keep.tip(subtree, filter(final_data,Kingdom=="Plantae")$phylo)
 
-
-PhyloSig_data_ANIMALS<-PhyloSig_data%>%filter(Kingdom=="Animalia")%>%select(-Kingdom)
-PhyloSig_data_PLANTS<-PhyloSig_data%>%filter(Kingdom=="Plantae")%>%select(-Kingdom)
-PhyloSig_data_ALL<-PhyloSig_data%>%select(-Kingdom)
-
-
-subtree_Animals<-keep.tip(subtree, rownames(PhyloSig_data_ANIMALS))
-subtree_Plants<-keep.tip(subtree, rownames(PhyloSig_data_PLANTS))
-
-#'--------------------------------------------------------------------------------------
-##	GLMM parameteres --------------
-#'--------------------------------------------------------------------------------------
-
-final_data%>%glimpse()
-
+# Create a new data only to run MCMCglmm
 data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))
 
-data_model%>%glimpse()
-
-#Transform CUMULATIVE IN ABSOLUTE VALUE
+#Transform CUMULATIVE IN ABSOLUTE VALUE - VERY IMPORTANT! 
 data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
 
 #save(data_model,subtree_Animals,subtree_Plants,
 #     file = "Data/GLMMdata.Rdata")
 
-
+#'--------------------------------------------------------------------------------------
+###	---------- 8.2.1 GLMM parameteres --------------
+#'--------------------------------------------------------------------------------------
 # Determines the fixed effect component
 fixEffect<-fixEffect<-"~LHPC.1 * LHPC.2 + ClimPC.1 * ClimPC.2 * ClimPC.3"
 
@@ -512,34 +485,24 @@ fixEffect<-fixEffect<-"~LHPC.1 * LHPC.2 + ClimPC.1 * ClimPC.2 * ClimPC.3"
 InterestingVars<-c("Survival","Growth","Shrinking","Reproduction","Clonality","Buffmx","Cumulative")
 
 
-
-
 traits<-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"), 
                                    colnames(data_model), value=TRUE))
 
-data_model%>%glimpse()
-
-
-
 #'--------------------------------------------------------------------------------------
-##       Export GLMM DATA & accessory info ---- 
+##    ---- 8.2.2 Export GLMM DATA & accessory info ---- 
 ##	Export GLMM data and accessory information to run externally if necessary
 # I prefer to run with Google Colab Notebook to improve efficiency
-#--------------------------------------------------------------------------------------
+#'--------------------------------------------------------------------------------------
+# For model selection use
+# file.edit("5b - MCMCglmm.R")
 
-#-------------------------------------------------------------------------------------
-#	RUN GLMM ANALYSES WITH AND WITHOUT PHYLOGENETIC CORRECTION
-# file.edit("5 - MCMCglmm.R")
-
-# Tidy GLMM outputs
-
-
-#--------------------------------------------------------------------------------------
+# Once best model is reached use
+# file.edit("5b - MCMCglmm.R")
 
 
-#=======================================================================================
-#		BUFFERING PATTERNS
-#=======================================================================================
+#'=======================================================================================
+#		---- 9. BUFFERING PATTERNS ---- 
+#'=======================================================================================
 final_data%>%glimpse()
 
 final_data_meta<-final_data%>%
@@ -547,12 +510,9 @@ left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
 
 final_data_meta%>%glimpse()
 
-#-----------------------------------------------------------------------------------
-#	RANKING BUFFERING
-#-----------------------------------------------------------------------------------
-
-ToRank
-
+#'-----------------------------------------------------------------------------------
+##	---- 9.1 RANKING BUFFERING ---- 
+#'-----------------------------------------------------------------------------------
 ToRank<-final_data%>%
 mutate(Cumulative_SigElas=abs(Cumulative_SigElas))%>%
 group_by(Kingdom)%>%
@@ -572,20 +532,18 @@ select(2,3,7,4,5,6,8,9)
 
 
 # Merging
-
 ToRank%>%
 left_join(.,ElasSigVR_full,by="ID")%>%mutate_if(is.numeric,round,3)%>%as.data.frame()
 
-
-#-----------------------------------------------------------------------------------
-#	Check overlapping Animals x plants
-#-----------------------------------------------------------------------------------
+#'-----------------------------------------------------------------------------------
+##	----- 9.2. Check overlapping Animals x plants 	----- 
+#'-----------------------------------------------------------------------------------
 
 t.test(abs(final_data$Cumulative_SigElas)~final_data$Kingdom)
 
-#-----------------------------------------------------------------------------------
-#	PROPORTIONAL CONTRIBUTION
-#-----------------------------------------------------------------------------------
+#'-----------------------------------------------------------------------------------
+##		----- 9.3. PROPORTIONAL CONTRIBUTION 	----- 
+#'-----------------------------------------------------------------------------------
 RelContrib<-final_data%>%as_tibble()%>%
 select(ID,Reproduction_SigElas:Survival_SigElas)%>%
 mutate_if(is.numeric,abs)%>%
@@ -596,14 +554,14 @@ mutate(RelativeProp=(value/NewCumulative)*100)%>%
 left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
 
 
-#Relative contribution by organismType
+### 9.3.1. Relative contribution by organismType -------
 RelContrib%>%
 group_by(Kingdom,name,OrganismType)%>%
 summarise(Relativemean=mean(RelativeProp),n=n())%>%
 pivot_wider(names_from=name,values_from = Relativemean)%>%
 group_by(Kingdom)%>%group_split()
 
-#Relative contribution by kingdon
+### 9.3.2. Relative contribution by kingdon -------
 RelContribtax<-RelContrib%>%
 group_by(name,Kingdom)%>%
 summarise(Relativemean=mean(RelativeProp),
@@ -615,16 +573,160 @@ RelContribtax%>%
   group_by(Kingdom)%>%group_split()
 
 
-#====================================================================
-# -----   H2: Phylogenetic signal x E_sig -----
+#'======================================================================================================
+#	---- 10. LOADING GLMM OUTPUTS AND PROCESS RESULTS   -----
+#'======================================================================================================
+
+MCMCglmm_output<-readRDS("Data/MCMCglmm_output.rds")
+
+lapply(MCMCglmm_output,names)
+
+## Phylogenetic models
+MCMCglmm_phylo_plants<-MCMCglmm_output$Phylogenetic_models[[1]]
+MCMCglmm_phylo_animals<-MCMCglmm_output$Phylogenetic_models[[2]]
+
+## Non-Phylogenetic (simple) models
+MCMCglmm_simple_plants<-MCMCglmm_output$Simple_models[[1]]
+MCMCglmm_simple_animals<-MCMCglmm_output$Simple_models[[2]]
+
+rm(MCMCglmm_output)
+
+MCMCglmm_simple_plants
+
+
+#'------------------------------------------------------------------------------------------------------
+##	---- 10.1 DATA HARMONIZATION 	---- 
+#'------------------------------------------------------------------------------------------------------
+#'------------------------------------------------------------------------------------------------------
+### Acessory function
+#'------------------------------------------------------------------------------------------------------
+process_models<-function(X,Taxa=Taxa,Model=Model){
+  # Verify if arguments match existing models
+  if (!Taxa %in% c("Plants", "Animals") || !Model %in% c("Phylo", "Simple")) {
+    stop("Please use Taxa = 'Plants' or 'Animals' and Model = 'Phylo' or 'Simple'") }
+  summ<-lapply(X,function(inner_list) summary(inner_list))
+  coff<-lapply(summ,function(inner_list) inner_list[[5]])
+  coff_df<-lapply(coff,as.data.frame)
+  coff_df2<-lapply(Phylo_models_plants_coefs,rownames_to_column, var = "Statistics")
+  do.call(rbind,Map(cbind, Trait = names(coff_df2),Taxa=Taxa, Model=Model, coff_df2))
+}
+#'------------------------------------------------------------------------------------------------------
+
+# Phylogenetic corrected models
+Phylo_models_df_plants<-process_models(MCMCglmm_phylo_plants,Taxa="Plants", Model="Phylo")
+Phylo_models_df_animals<-process_models(MCMCglmm_phylo_animals,Taxa="Animals", Model="Phylo")
+
+# Simple models
+Simple_models_df_plants<-process_models(MCMCglmm_phylo_plants,Taxa="Plants", Model="Simple")
+Simple_models_df_animals<-process_models(MCMCglmm_phylo_animals,Taxa="Animals", Model="Simple")
+
+#'------------------------------------------------------------------------------------------------------
+
+GLMMs_df<-rbind(Phylo_models_df_plants,Phylo_models_df_animals,
+                Simple_models_df_plants,Simple_models_df_animals)
+
+
+colnames(GLMMs_df)<-c("Trait","Taxa","Model","Statistics","post.mean","low95","high95","eff.samp","pMCMC")
+
+#'---------------------------------------------------------------------------------------------------
+## -----  10.1.1. SUMMARY SINTHESIS  -----  
+#'---------------------------------------------------------------------------------------------------
+
+GLMMs_df_summary<-GLMMs_df%>%
+  mutate(sig=ifelse(pMCMC<=0.05,"Sig","Non-Sig"))%>%
+  filter(pMCMC<=0.1)%>%
+  filter(Statistics!="(Intercept)")
+
+
+# PLANTs x Cumulative only
+GLMMs_df_summary%>%
+  filter(Taxa=="Plants" & Trait == "Cumulative_SigElas")%>%
+  group_by(Trait)
+
+
+# By vital rates - Plants & Animals
+GLMMs_df_summary%>%
+  filter(Trait != "Cumulative_SigElas")%>%
+  group_by(Trait)%>%group_split()
+
+
+#'======================================================================================================
+#			----- 10.1.2. Posterior distributions -------
+#'======================================================================================================
+Phylo_posterior_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) data.frame(inner_list$Sol,Taxa="Animals",Model="Phylo"))
+Phylo_posterior_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) data.frame(inner_list$Sol,Taxa="Plants",Model="Phylo"))
+
+Simple_posterior_animals<-lapply(MCMCglmm_simple_animals,function(inner_list) data.frame(inner_list$Sol,Taxa="Animals",Model="Simple"))
+Simple_posterior_plants<-lapply(MCMCglmm_simple_plants,function(inner_list) data.frame(inner_list$Sol,Taxa="Plants",Model="Simple"))
+
+Posterior_data<-rbind(
+  do.call(rbind,Phylo_posterior_animals),
+  do.call(rbind,Phylo_posterior_plants),
+  do.call(rbind,Simple_posterior_animals),
+  do.call(rbind,Simple_posterior_plants))%>%
+  rownames_to_column(., var = "VAR")%>%
+  separate(VAR,c("Trait"))%>%
+  pivot_longer(!c(Trait,Taxa,Model),values_to="Values",names_to="Variables")%>%
+  mutate(Variables=ifelse(Variables=="LHPC.1.LHPC.2","LHPC.1:LHPC.2",Variables))%>%
+  mutate(Variables=ifelse(Variables=="ClimPC.1.ClimPC.2","ClimPC.1:ClimPC.2",Variables))%>%
+  as_tibble()%>%
+  filter(Variables!="X.Intercept.")
+
+Posterior_data<-left_join(Posterior_data,
+                          GLMMs_df%>%separate(Trait,"Trait"),
+                          by=c("Trait","Taxa","Model","Variables"="Statistics"))%>%
+  mutate(sig=ifelse(pMCMC<=0.05,"Sig","Non-Sig"))
+
+
+#==========================================================================
+#	---- 11. Estimating PHYLOGENETIC SIGNAL ---- 
+#==========================================================================
+
+# Create an axilliary function
+my.fake.lamb<-function(model){
+  out =  model$VCV[,"phylo"]/
+    (model$VCV[,"phylo"]+
+       #            model$VCV[,"species"]+
+       model$VCV[,"units"])
+  mean.Lambda=mean(out)
+  SE.lambda=(sd(out)/sqrt(length(out)))
+  return(out)
+}
+
+
+
+#InterestingVars<-c("Survival","Growth","Shrinking","Reproduction","Clonality","Buffmx","Cumulative")
+traits<-c("Reproduction_SigElas", "Growth_SigElas", "Shrinking_SigElas",  "Clonality_SigElas", "Survival_SigElas",
+          "Cumulative_SigElas","Buffmx")  
+
+lapply(MCMCglmm_phylo_animals,function(inner_list) inner_list$VCV)
+
+Phylo_signal_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) as.data.frame(my.fake.lamb(inner_list)))%>%
+  do.call(cbind,.)
+
+Phylo_signal_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) as.data.frame(my.fake.lamb(inner_list)))%>%
+  do.call(cbind,.)
+
+colnames(Phylo_signal_animals)<-str_split_i(traits, "_", 1)
+colnames(Phylo_signal_plants)<-str_split_i(traits, "_", 1)
+
+Phylo_signal_df<-rbind(
+  data.frame(Phylo_signal_plants,Taxa="Plants"),
+  data.frame(Phylo_signal_animals,Taxa="Animals"))%>%
+  pivot_longer(!Taxa,names_to="Trait",values_to="Values")
+
+
+
+
+#'====================================================================
+# -----   12. H2: Phylogenetic signal x E_sig -----
 #		TEST IF PHYLOGENETIC SIGNAL IS GREATER 
 #   IN VITAL RATES THAT CONTRIBUTE MOST
-#====================================================================
+#'====================================================================
 
 RelContribtax
 
 Phylo_summary # Originally from 5c - Tidy MCMCglmm output
-
 
 # TESTING Relative contribution
 cor.test_df<-RelContribtax %>%
@@ -658,9 +760,25 @@ cor.test(cor.test_df$E_sig,cor.test_df$MEDIAN,method="spearman")
 
 plot(cor.test_df$E_sig~cor.test_df$MEDIAN)
 
-#====================================================================
-#		FIGURE 1
-#====================================================================
+
+#'====================================================================
+#		----- 11. FIGURES ------
+#'====================================================================
+
+#'====================================================================
+##		11.1. FIGURE 1 -----
+#'====================================================================
+#'------------------------------------------------------------------------
+#	ACCESSORY FUNCTION
+#'------------------------------------------------------------------------
+
+scientific_10 <- function(x) { 
+  parse(text=gsub("e", " %*% 10^", scales::scientific_format()(x)))
+}
+
+#'------------------------------------------------------------------------
+
+# Calculate stochastic Growth Rate (Stoch Lambs)
 temp<-Stochslambs<-NULL
 for(i in 1:length(unique(final_data$ID))){
 temp<-filter(
@@ -686,15 +804,7 @@ Stochslambs_df<-data.frame(
 		mutate_if(is.numeric,exp)%>%
 	rename(., ID = unique.final_data.ID.)
 
-
-#------------------------------------------------------------------------
-#	ACCESSORY FUNCTION
-#------------------------------------------------------------------------
-scientific_10 <- function(x) {
-  parse(text=gsub("e", " %*% 10^", scales::scientific_format()(x)))
-}
-#------------------------------------------------------------------------
-
+# Plot
 final_data%>%
  select(ID:Cumulative_SigElas,Buffmx:MatRep,OrganismType,Kingdom,lambda)%>%
  pivot_longer(!c(ID,MatRep:lambda))%>%
@@ -727,15 +837,16 @@ theme(aspect.ratio=6/18)
 #ggsave(file="Figures/Buffering continuum.svg")
 
 
-#---------------------------------------------------------------------------------------
-#	FIGURE 2. BUFFERING AND VITAL RATES
-#---------------------------------------------------------------------------------------
+#'---------------------------------------------------------------------------------------
+##	----- 11.2. FIGURE 2. BUFFERING AND VITAL RATES ----- 
+#'---------------------------------------------------------------------------------------
 taxaLev<-c("Chordata","Arthropoda","Cnidaria",
 	"Annual","Herbaceous perennial","Succulent",
 		"Epiphyte","Shrub","Tree","Palm")
 
 traitLev<-c("Cumulative","Survival","Reproduction","Growth","Shrinking","Clonality")
 
+# Create the database
 plotbuff_data<-final_data%>%
 mutate(Taxa=ifelse(Kingdom=="Plantae", OrganismType,Phylum))%>%
 select(c(Reproduction_SigElas:Survival_Base),MatRep,Kingdom,Taxa)%>%
@@ -792,9 +903,59 @@ p2<-p2+ylab(bquote("Effect of environmental variation ("~ sum(E[v]^sigma)~" )"))
 x11(height=862, width=1106);cowplot::plot_grid(p1,p2,ncol=1,labels="AUTO")
 
 #ggsave(file="Figures/Vital rate contribution_new.svg")
-#-------------------------------------------------------------------------
-#	BUFFERING TREE OF LIFE
-#-------------------------------------------------------------------------
+
+
+#======================================================================================================
+#			----- 11.3 FIGURE 3. Posterior distribution -------
+#======================================================================================================
+ggplot_posteriors<-Posterior_data%>%
+  filter(Trait!="Buffmx")%>%
+  ggplot(.,aes(x=Variables,y=Values,group=Model))+
+  geom_hline(yintercept=0,linetype=2,color="grey50",linewidth=1.4)+
+  stat_pointinterval(position=position_dodge(.5),.width = c(.66, .95),
+                     aes(x = Variables,color=sig,shape=Model,fill=Model,alpha=sig))+
+  scale_alpha_manual(values=c(.2,1))+
+  scale_fill_manual(values=c("#da1438","#a783ce"))+
+  scale_color_manual(values=c("grey30","black"))+
+  scale_shape_manual(values=c(21,21))+
+  xlab("Variables")+ylab("Posterior distribution")+
+  ggh4x::facet_grid2(Trait~Taxa,scales="free_x",independent = "x")+
+  theme_minimal(base_size=16)+coord_flip()+
+  theme(
+    #axis.text.x = element_text(angle = 45, hjust=1),
+    legend.position="top")+
+  guides(shape = guide_legend(override.aes = list(size = 5)))
+
+
+
+ggplot_posteriors$data%>%glimpse()
+
+ggplot_posteriors_vr<-ggplot_posteriors_cumu<-ggplot_posteriors
+
+ggplot_posteriors_cumu$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait == "Cumulative")
+ggplot_posteriors_vr$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait != "Cumulative")
+
+# All vital rates + cumulative + All taxa
+ggplot_posteriors
+
+#  cumulative  & Plants only
+ggplot_posteriors_cumu
+
+#  cumulative vr & Plants only
+ggplot_posteriors_vr
+
+
+
+
+
+
+
+
+
+#'-------------------------------------------------------------------------
+#	----- 11.3. BUFFERING TREE OF LIFE ----- 
+#           NOT INCLUDED!!!
+#'-------------------------------------------------------------------------
 library(ggtree)
 library(ggnewscale)
 groupTaxa<-NULL
@@ -851,13 +1012,13 @@ phylo3
 
 
 
-#===================================================================
-#	FINAL METADATA
-#===================================================================
+#'===================================================================
+#	---- 12. FINAL METADATA ---- 
+#'===================================================================
 
-#-----------------------------------------------------------------------
+#'-----------------------------------------------------------------------
 # Include DOI to retrive full reference list of studies used
-#-----------------------------------------------------------------------
+#'-----------------------------------------------------------------------
 load("Data/COMADRE_v.4.23.3.1.RData")
 load("Data/COMPADRE_v.6.23.5.0.RData")
 
@@ -869,7 +1030,7 @@ comadre$StudyID<-cdb_id_studies(comadre)
 
 compadre_db<-rbind(comadre@data,compadre@data)%>%
 distinct(SpeciesAccepted,StudyID,StudyStart,StudyEnd,Lat,Lon,DOI_ISBN,Authors,Journal,YearPublication,SourceType)
-#-----------------------------------------------------------------------
+#'-----------------------------------------------------------------------
 library(rcrossref)
 
 Final_metadata<-final_data%>%
