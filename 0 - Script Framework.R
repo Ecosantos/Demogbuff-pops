@@ -770,7 +770,7 @@ cor.test(abs(cor.test_df$E_sig),cor.test_df$mean,method="spearman")
 ##		11.1. FIGURE xxxx -----
 #'--------------------------------------------------------------------
 ggplot(cor.test_df,aes(y=mean,x=abs(E_sig)))+
-  geom_point(size=4,alpha=.6,color="#1f9a59")+
+  geom_pointrange(aes(ymin=mean-SD.y , ymax=mean+SD.y ),color="#1f9a59")+
   labs(x = "Stochastic elasticity in respect to variance",
        y = "Phylogenetic signal \n (Pagel's lambda)") +
   theme_minimal(base_size=16)+
@@ -781,7 +781,7 @@ ggplot(cor.test_df,aes(y=mean,x=abs(E_sig)))+
   #  ggrepel required
   ggrepel::geom_text_repel(aes(label=Trait),box.padding = 0.5,size=4,color="black")
 
-#ggsave(file="Figures/Phylo sig.svg")
+ggsave(file="Figures/Phylo sig.svg")
 
 
 #Bar plot - Will be removed in a near future
