@@ -305,10 +305,11 @@ Phylo_summary <- Phylo_signal_df %>%
     SE = SD / sqrt(n()) )%>%
   mutate(Trait=factor(Trait,levels = c("Survival", "Growth", "Shrinking", "Reproduction", "Clonality")))
 
+Phylo_summary
 
-ggplot(Phylo_summary, aes(x = Trait, y = MEDIAN, fill = Taxa)) +
+ggplot(Phylo_summary, aes(x = Trait, y = mean, fill = Taxa)) +
   geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
-  geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
+  geom_pointrange(aes(ymin = mean - SD, ymax=pmin(mean + SD, 1)), 
                   position = position_dodge(width = 0.9), color = "black", size = 0.8) +
   scale_fill_manual(values=c("#1f9a59"))+
   labs(x = NULL,

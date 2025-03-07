@@ -434,33 +434,6 @@ select(-inPhylo)%>%
 arrange(.,match(Binomial,subtree$tip))%>%
 data.frame()
 
-#Total populations
-final_data%>%dim()
-
-#Total species
-final_data$SpeciesAccepted%>%unique()%>%length()
-
-#Populations by kingdom
-final_data%>%select(Kingdom)%>%table()
-
-#Species by kingdom
-final_data%>%select(SpeciesAccepted,Kingdom)%>%
-distinct()%>%select(Kingdom)%>%table()
-
-# USED MPMs
-filter(Metadata, ID %in% final_data$ID)$mat%>%length()
-
-#'=======================================================================================
-## -------	8.1 DATASET PREPARATION AND GLMM ANALYSES -----
-#'=======================================================================================
-#Prepare dataset for phylogenetic analyses
-final_data%>%
-  as_tibble()%>%
-  distinct(final_data$Binomial,.keep_all=TRUE)$Binomial%>%
-  column_to_rownames("Binomial")%>%
-  select(is.numeric,Kingdom)%>%
-  select(-c(Clonality_Base,Clonality_SigElas))
-
 #Prepare phylogeny with respective populations 
 subtree_Animals<-keep.tip(subtree, filter(final_data,Kingdom=="Animalia")$phylo)
 subtree_Plants<-keep.tip(subtree, filter(final_data,Kingdom=="Plantae")$phylo)
@@ -474,6 +447,27 @@ data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
 #save(data_model,subtree_Animals,subtree_Plants,
 #     file = "Data/GLMMdata.Rdata")
+
+
+#'================================================================================
+#		----- 8.1 FINAL DATASETS STAT -----
+#'================================================================================
+
+#Total populations
+final_data%>%dim()
+
+#Total species
+final_data$SpeciesAccepted%>%unique()%>%length()
+
+#Populations by kingdom
+final_data%>%select(Kingdom)%>%table()
+
+#Species by kingdom
+final_data%>%select(SpeciesAccepted,Kingdom)%>%
+  distinct()%>%select(Kingdom)%>%table()
+
+# USED MPMs
+filter(Metadata, ID %in% final_data$ID)$mat%>%length()
 
 #'--------------------------------------------------------------------------------------
 ###	---------- 8.2.1 GLMM parameteres --------------
@@ -573,9 +567,14 @@ RelContribtax%>%
   group_by(Kingdom)%>%group_split()
 
 
+
 #'======================================================================================================
-#	---- 10. LOADING GLMM OUTPUTS AND PROCESS RESULTS   -----
+#	---- 10. Estimating phylogenetic signal and processing mcmcglmm   -----
 #'======================================================================================================
+
+#'------------------------------------------------------------------------------------------------------
+##	---- 10.1 Loada data  	---- 
+#'------------------------------------------------------------------------------------------------------
 
 MCMCglmm_output<-readRDS("Data/MCMCglmm_output.rds")
 
@@ -591,12 +590,9 @@ MCMCglmm_simple_animals<-MCMCglmm_output$Simple_models[[2]]
 
 rm(MCMCglmm_output)
 
-MCMCglmm_simple_plants
-
 
 #'------------------------------------------------------------------------------------------------------
 ##	---- 10.1 DATA HARMONIZATION 	---- 
-#'------------------------------------------------------------------------------------------------------
 #'------------------------------------------------------------------------------------------------------
 ### Acessory function
 #'------------------------------------------------------------------------------------------------------
@@ -607,7 +603,7 @@ process_models<-function(X,Taxa=Taxa,Model=Model){
   summ<-lapply(X,function(inner_list) summary(inner_list))
   coff<-lapply(summ,function(inner_list) inner_list[[5]])
   coff_df<-lapply(coff,as.data.frame)
-  coff_df2<-lapply(Phylo_models_plants_coefs,rownames_to_column, var = "Statistics")
+  coff_df2<-lapply(coff_df,rownames_to_column, var = "Statistics")
   do.call(rbind,Map(cbind, Trait = names(coff_df2),Taxa=Taxa, Model=Model, coff_df2))
 }
 #'------------------------------------------------------------------------------------------------------
@@ -617,8 +613,8 @@ Phylo_models_df_plants<-process_models(MCMCglmm_phylo_plants,Taxa="Plants", Mode
 Phylo_models_df_animals<-process_models(MCMCglmm_phylo_animals,Taxa="Animals", Model="Phylo")
 
 # Simple models
-Simple_models_df_plants<-process_models(MCMCglmm_phylo_plants,Taxa="Plants", Model="Simple")
-Simple_models_df_animals<-process_models(MCMCglmm_phylo_animals,Taxa="Animals", Model="Simple")
+Simple_models_df_plants<-process_models(MCMCglmm_simple_plants,Taxa="Plants", Model="Simple")
+Simple_models_df_animals<-process_models(MCMCglmm_simple_animals,Taxa="Animals", Model="Simple")
 
 #'------------------------------------------------------------------------------------------------------
 
@@ -641,6 +637,11 @@ GLMMs_df_summary<-GLMMs_df%>%
 # PLANTs x Cumulative only
 GLMMs_df_summary%>%
   filter(Taxa=="Plants" & Trait == "Cumulative_SigElas")%>%
+  group_by(Trait)
+
+# Plants in general
+GLMMs_df_summary%>%
+  filter(Taxa=="Plants")%>%
   group_by(Trait)
 
 
@@ -699,8 +700,6 @@ my.fake.lamb<-function(model){
 traits<-c("Reproduction_SigElas", "Growth_SigElas", "Shrinking_SigElas",  "Clonality_SigElas", "Survival_SigElas",
           "Cumulative_SigElas","Buffmx")  
 
-lapply(MCMCglmm_phylo_animals,function(inner_list) inner_list$VCV)
-
 Phylo_signal_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) as.data.frame(my.fake.lamb(inner_list)))%>%
   do.call(cbind,.)
 
@@ -715,7 +714,23 @@ Phylo_signal_df<-rbind(
   data.frame(Phylo_signal_animals,Taxa="Animals"))%>%
   pivot_longer(!Taxa,names_to="Trait",values_to="Values")
 
+Phylo_summary <- Phylo_signal_df %>%
+  filter(Taxa=="Plants" & !(Trait %in% c("Cumulative","Buffmx")))%>%
+  group_by(Taxa,Trait) %>%
+  summarise(
+    mean = mean(Values),
+    SD = sd(Values),
+    SE = SD / sqrt(n()) )%>%
+  mutate(Trait=factor(Trait,levels = c("Survival", "Growth", "Shrinking", "Reproduction", "Clonality")))
 
+Phylo_summary
+
+Phylo_signal_df %>%
+  filter(Taxa=="Plants" & !(Trait %in% c("Cumulative","Buffmx")))%>%
+  aov(abs(Values) ~ Trait, data = .)%>%
+  { print(summary(.)); invisible(.) }%>%
+  { print(emmeans::emmeans(., pairwise ~ Trait, adjust = "tukey")); invisible(.)}%>%
+  TukeyHSD(.)
 
 
 #'====================================================================
@@ -723,24 +738,8 @@ Phylo_signal_df<-rbind(
 #		TEST IF PHYLOGENETIC SIGNAL IS GREATER 
 #   IN VITAL RATES THAT CONTRIBUTE MOST
 #'====================================================================
+# Using raw values of E_sig not proportional contribution
 
-RelContribtax
-
-Phylo_summary # Originally from 5c - Tidy MCMCglmm output
-
-# TESTING Relative contribution
-cor.test_df<-RelContribtax %>%
-  filter(Kingdom=="Plantae")%>%
-  mutate(name = gsub("_SigElas", "", name, fixed = TRUE))%>%
-  rename(Trait = name, E_sig = Relativemean)%>%
-  left_join(., Phylo_summary, by = "Trait")
-
-
-  cor.test(cor.test_df$E_sig,cor.test_df$MEDIAN,method="kendall")
-  
-plot(cor.test_df$E_sig~cor.test_df$MEDIAN)
-  
-# TESTING raw values - Marginally significant! 
 cor.test_df<-final_data%>%as_tibble()%>%
   select(ID,Reproduction_SigElas:Survival_SigElas)%>%
 #  mutate_if(is.numeric,abs)%>%
@@ -755,15 +754,48 @@ pivot_longer(!c(ID))%>%
   left_join(., Phylo_summary, by = "Trait")%>%
   filter(Kingdom=="Plantae")
 
-cor.test_df
-cor.test(cor.test_df$E_sig,cor.test_df$MEDIAN,method="spearman")
-
-plot(cor.test_df$E_sig~cor.test_df$MEDIAN)
+# Non-signifant if absolute value is considered
+# if raw value is considered it is significant but it is not the hypothesis we have
+# Explore in the future
+cor.test(abs(cor.test_df$E_sig),cor.test_df$mean,method="pearson")
+cor.test(abs(cor.test_df$E_sig),cor.test_df$mean,method="kendall")
+cor.test(abs(cor.test_df$E_sig),cor.test_df$mean,method="spearman")
 
 
 #'====================================================================
 #		----- 11. FIGURES ------
 #'====================================================================
+
+#'--------------------------------------------------------------------
+##		11.1. FIGURE xxxx -----
+#'--------------------------------------------------------------------
+ggplot(cor.test_df,aes(y=mean,x=abs(E_sig)))+
+  geom_point(size=4,alpha=.6,color="#1f9a59")+
+  labs(x = "Stochastic elasticity in respect to variance",
+       y = "Phylogenetic signal \n (Pagel's lambda)") +
+  theme_minimal(base_size=16)+
+  theme(
+    #aspect.ratio=3/4,
+    legend.position="none",
+    panel.spacing = unit(2, "lines"))+
+  #  ggrepel required
+  ggrepel::geom_text_repel(aes(label=Trait),box.padding = 0.5,size=4,color="black")
+
+#ggsave(file="Figures/Phylo sig.svg")
+
+
+#Bar plot - Will be removed in a near future
+#ggplot(Phylo_summary, aes(x = Trait, y = mean, fill = Taxa)) +
+#  geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
+#  geom_pointrange(aes(ymin = mean - SD, ymax=pmin(mean + SD, 1)), 
+#                  position = position_dodge(width = 0.9), color = "black", size = 0.8) +
+#  scale_fill_manual(values=c("#1f9a59"))+
+#  labs(x = NULL,
+#       y = "Phylogenetic signal \n (Pagel's lambda)") +
+#  theme_minimal(base_size=18)+
+#  theme(legend.position="none",
+#        panel.spacing = unit(2, "lines"))
+
 
 #'====================================================================
 ##		11.1. FIGURE 1 -----
@@ -906,7 +938,7 @@ x11(height=862, width=1106);cowplot::plot_grid(p1,p2,ncol=1,labels="AUTO")
 
 
 #======================================================================================================
-#			----- 11.3 FIGURE 3. Posterior distribution -------
+##			----- 11.3 FIGURE 3. Posterior distribution -------
 #======================================================================================================
 ggplot_posteriors<-Posterior_data%>%
   filter(Trait!="Buffmx")%>%
