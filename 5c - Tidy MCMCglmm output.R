@@ -291,11 +291,6 @@ Phylo_signal_df%>%glimpse()
 filter(Phylo_signal_df,Trait=="Reproduction" & Taxa=="Plants")$Values%>%range()
 
 
-Phylo_signal_df%>%
-  ggplot(.,aes(x=Trait))+
-  geom_bar()
-
-
 Phylo_summary <- Phylo_signal_df %>%
   filter(Taxa=="Plants" & !(Trait %in% c("Cumulative","Buffmx")))%>%
   group_by(Taxa,Trait) %>%
@@ -307,9 +302,9 @@ Phylo_summary <- Phylo_signal_df %>%
 
 Phylo_summary
 
-ggplot(Phylo_summary, aes(x = Trait, y = mean, fill = Taxa)) +
+ggplot(Phylo_summary, aes(x = Trait, y = MEDIAN, fill = Taxa)) +
   geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
-  geom_pointrange(aes(ymin = mean - SD, ymax=pmin(mean + SD, 1)), 
+  geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
                   position = position_dodge(width = 0.9), color = "black", size = 0.8) +
   scale_fill_manual(values=c("#1f9a59"))+
   labs(x = NULL,
@@ -318,9 +313,6 @@ ggplot(Phylo_summary, aes(x = Trait, y = mean, fill = Taxa)) +
   theme(legend.position="none",
         panel.spacing = unit(2, "lines"))
 
-
-
-data_model
 
 
 #==========================================================================
@@ -334,7 +326,7 @@ Check_traces<-function(X){
   op <- par(ask=TRUE)
   allChains <- NULL
   for(i in 1:length(X)){
-    allChains <-as.mcmc(cbind(X[[i]]$Sol,X[[i]]$VCV))
+    allChains <-coda::as.mcmc(cbind(X[[i]]$Sol,X[[i]]$VCV))
     plotMCMC::plotTrace(allChains,
                         main=X[[i]]$Fixed$formula,cex.main = .6)
     print ("Click on plot to continue")

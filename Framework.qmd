@@ -1,31 +1,31 @@
 ---
 title: "Population responses to environmental stochasticity are primarily driven by survival-reproduction trade-offs and mediated by aridity"
 author:
-  - name: Gabriel S. Santos
-    orcid: 0000-0001-7991-8807
-    email: ssantos.gabriel@gmail.com
-    affiliations:
-      - name: Afiliação 1
-      - name: Instituto Nacional da Mata Atlântica
+ - name: Gabriel S. Santos
+orcid: 0000-0001-7991-8807
+email: ssantos.gabriel\@gmail.com
+affiliations:
+ - name: Afiliação 1
+ - name: Instituto Nacional da Mata Atlântica
 date: last-modified
-date-format: "[Last compiled on] D MMMM, YYYY - HH:mm[h]"
-format: 
-  html:
-    code-fold: show  # Determine code collapsed 
-    engine: knitr
+date-format: "\[Last compiled on\] D MMMM, YYYY - HH:mm\[h\]"
+format:
+html:
+code-fold: show \# Determine code collapsed
+engine: knitr
 editor: visual
 toc: true
 toc-location: left
 execute:
-  cache: true        #Chck if it is always works well
+cache: true #Chck if it is always works well
 knitr:
-  opts_chunk:
-    comment: "#>"
-    collapse: true
+opts_chunk:
+comment: "#\>"
+collapse: true
 reference-location: margin
 citation-location: margin
 tags:
-  - Demographic buffering
+ - Demographic buffering
 ---
 
 ```{css, echo = FALSE, title="Determine table width and size in Quarto"}
@@ -214,9 +214,9 @@ Data come from Chelsacruts. An intermediary dataset containing list for all clim
 
 ## Step 3b - Climatic variables calculation
 
-- Data summary and metrics extraction described in methods
-- Produce final dataset to analyse: "climate_df.RDS"
-- Environmental trend, amplitude, and stochasticisticy
+-   Data summary and metrics extraction described in methods
+-   Produce final dataset to analyse: "climate_df.RDS"
+-   Environmental trend, amplitude, and stochasticisticy
 
 Produces the intermediary dataset `climate_df.RDS`
 
@@ -235,8 +235,8 @@ climate_df %>% kable %>%
 
 # Step 4 - Summarising life-history traits and climatic variables in their respectives Principal Component Analysis
 
-
 ## 4.1. Life-history PCA
+
 ```{r,title="Life-history PCA"}
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
@@ -267,8 +267,8 @@ rename_with(., ~ gsub("Dim", "LHAxis", .x, fixed = TRUE))%>%
 filter(complete.cases(.))
 ```
 
-
 ## 4.2a. Environmental PCA
+
 ```{r,title="Environmental PCA"}
 climate_df%>%select(-ID)%>%cor()%>%corrplot::corrplot()
 
@@ -298,8 +298,8 @@ dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
 
 
 ```
-### 4.2b Mapping climatic axes
 
+### 4.2b Mapping climatic axes
 
 ```{r, title="Mapping climatic data - Supplementary material production"}
 Plot_clim<-Metadata%>%dplyr::select(.,c(ID,Lat,Lon))%>%
@@ -329,31 +329,26 @@ scale_size(range = c(1.5, 5))+
  theme_void()
 
 ```
+
 # 5. Calculate demographic buffering from lower level vital rates
 
-Source mainfunction used in the calculation of	stochastic elasticities within respect to variance of lower level vital rates
+Source mainfunction used in the calculation of stochastic elasticities within respect to variance of lower level vital rates
 
-- This script creates the following functions:
-  1. "my.vitalRatePerturbation": Produce the stochasticity elasticity with respect to variance.
-  2. "array_to_matrix": Ancilliary function
-
+-   This script creates the following functions:
+    1.  "my.vitalRatePerturbation": Produce the stochasticity elasticity with respect to variance.
+    2.  "array_to_matrix": Ancilliary function
 
 ```{r}
 source("MainFunction - Stochastic elasticities of variance lower level.R")
 ```
 
-
-> EXAMPLE: Case where shrinking is possible in Animal
- Alternation between reproductive non-reproductive stage
- Reproductive estage <--> non-reproductive stage
->```
->filter(Metadata,ID=="Urs2.183_726")$mat
->lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matA)
->my.vitalRatePerturbation(
->lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matU),
->lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matF),
->lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))
->```
-
-
-
+> EXAMPLE: Case where shrinking is possible in Animal Alternation between reproductive non-reproductive stage Reproductive estage \<--\> non-reproductive stage
+>
+> ```         
+> filter(Metadata,ID=="Urs2.183_726")$mat
+> lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matA)
+> my.vitalRatePerturbation(
+> lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matU),
+> lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matF),
+> lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))
+> ```
