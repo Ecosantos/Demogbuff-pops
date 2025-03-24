@@ -204,6 +204,7 @@ ClimPCA%>%glimpse()
 ClimPCA$ind$coord
 ClimPCA$eig%>%t()	#Explained variables
 
+
 cowplot::plot_grid(nrow=1,
 cowplot::plot_grid(ncol=1,
 fviz_eig(ClimPCA)+theme_bw(base_size=14),

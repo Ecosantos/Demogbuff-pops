@@ -1,0 +1,275 @@
+---
+title: "A general framework to run analyses in Santos et al.xxxxx"
+output: 
+  html_notebook:
+    code_folding: hide    
+bibliography: references.bib
+---
+
+# 0 - Setting
+
+AAAAAA
+
+```{r}
+ls()
+#Metadata
+```
+
+```{r echo=FALSE, message=TRUE, warning=TRUE}
+
+set.seed(1)
+
+rm(list=ls())
+
+#Packages
+library(tidyverse)	#v2.0.0
+library(popbio)		#v2.7		
+library(popdemo)		#v1.3.1
+library(ggplot2)		#v3.5.0
+library(scales)		#v1.3.0
+library(tidyr)		#v1.3.0
+library(viridis)		#v0.6.3
+library("FactoMineR")	#v2.8
+library("factoextra")	#v1.0.7
+library(Rcompadre)	#v1.2.1
+library(Rage)		#v1.4.0
+library(vegan)		#v2.6.4
+library(rstatix)		#0.7.2
+#library(Rmosaic) ; remotes::install_github("mosaicdatabase/Rmosaic")
+#library(imputeTS)	
+library(tidybayes)	#v3.0.6
+library("treeio")		#v1.24.1
+library("ggtree")		
+library(MCMCglmm)		#v2.35
+#phytools			#v1.9.16 - In use but not loaded
+
+```
+
+## 0.1. SessionInfo and package versions
+
+<!-- NOTWORKING ON RNOTEBOOK BUT IT IS OK IN CONSOLE!!!! -->
+
+```{r eval=FALSE, include=FALSE}
+#Check package versions
+cbind(unlist(loadedNamespaces()),
+  unlist(lapply(
+	lapply(loadedNamespaces(),packageVersion),
+		as.character)))%>%
+		data.frame()%>%arrange(-desc(X1))
+```
+
+# 1. Readme
+
+<!-- #TODO: FALTA AJUSTAR A ORDEM DIREITO PARA REFLETIR AS MUDANÇAS NOS ARQUIVOS. Ex. TidyMCMC e Run MCMC in Google colab -->
+
+The following script provide the general framework used to analyse
+demographic buffering continuum in Santos et al. in review:
+
+Population responses to environmental stochasticity are primarily driven
+by survival-reproduction trade-offs and mediated by aridity
+
+-   Intermediary code and data steps are sourced along the framework
+-   Intermediary code and data include:
+    -   1 - Data cleaning and selection and its intermediary data
+    -   2 - Life history traits calculation and its intermediary data
+    -   3 - Climatic variables calculation
+    -   4 - Analyses with MCMCglmm
+    -   5 - Core function: Stochastic elasticities of variance
+        <!--# AAAAAAAAAA -->
+
+# 2. Data selection and cleaning - COMPADRE, COMADRE & MOSAIC
+
+-   Script avaliable in "1 - Data cleaning and selection.R"
+-   Produce two datasets:
+    -   CleanData: Filter matrix singularity, presence of fecundity,
+        individual matrices only
+    -   Supertree: extract supertree from MOSAIC database (@bernard2023)
+
+```{r}
+# Load cleaned data
+CleanData<-readRDS("Data/CleanData.RDS")
+supertree<-readRDS("Data/supertree.RDS")
+
+Metadata<-CleanData$Metadata
+MetadataClean<-CleanData$MetadataClean
+
+#Reduce data to improve redability
+MedatadaFinal<-MetadataClean%>%select(-c(lambda,Ecoregion,Binomial))
+MedatadaFinal<-MedatadaFinal%>%
+	left_join(.,
+			Metadata%>%select(ID,StudyStart, StudyDuration, StudyEnd)%>%distinct(),
+				by="ID")
+
+rm(CleanData)	#Remove non-used data to improve memory usage
+
+```
+
+# 3. LIFE HISTORY TRAITS <br> (Calculate life history traits)
+
+Script avaliable in "2 - Life history traits calculation.R"
+
+-   Produce:
+    -   dataset LHtraits.RDS:
+    -   Calculate life history traits and detect outliers
+
+```{r}
+Metadata
+```
+
+```{r}
+#file.edit("2 - Life history traits calculation.R")
+LHtraits<-readRDS("Data/LHtraits.RDS")
+LHtraits
+## .. Filter outliers ----
+spLHmat<-LHtraits%>%
+	filter(is.outlier=="FALSE")%>%
+		select(-c(is.outlier,mahal.dist))	%>%
+column_to_rownames(var = "ID")
+
+#Correlation plot - check colinearity
+#spLHmat%>%cor()%>%corrplot::corrplot(.,title="Check Colinerarity on LH traits")
+```
+
+## 3.1 FAST-SLOW CONTINUUM / Life history PCA
+
+-   Perform PCA
+
+-   Check eigenvalues
+
+-   Plot eigenvalues and correlgram
+
+```{r "life-history PCA"}
+LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
+
+# LHpca - Map variables
+LHpca$eig%>%t()	#Explained variables
+LHpca$ind$coord	#Eigenvalues
+dimdesc(LHpca, axes = 1:3, proba = 0.05)
+
+# 2.2.Check PCA -----
+cowplot::plot_grid(nrow=1,
+  cowplot::plot_grid(ncol=1,
+    fviz_eig(LHpca)+theme_bw(base_size=14),
+    fviz_pca(LHpca, geom=c("point"))+theme_bw(base_size=14)
+      ),
+  LHpca$var$cor%>%
+    ggcorrplot::ggcorrplot(method = "circle")+
+    theme_bw(base_size=14)+theme(
+      axis.text.x=element_text(angle=75,hjust=1)))+
+      coord_fixed(ratio=.50)
+
+#ggsave(file="Figures/PCALH.svg")
+
+
+#Use Principal Components as variables - add to LHtraits
+LHtraits<-left_join(by="ID",
+	LHtraits,
+	  LHpca$ind$coord%>%data.frame()%>%
+	  rownames_to_column(var="ID")%>%as_tibble()%>%
+    rename_with(., ~ gsub("Dim", "LHAxis", .x, fixed = TRUE))%>%
+  	select(ID,LHAxis.1:LHAxis.2))%>%
+  filter(complete.cases(.))
+
+```
+
+# 4. Climate variables and environmental PCA <br>
+
+<!-- UMA EXPLICAÇÃO MELHOR AQUI SERÁ BEM VINDA EXPLICANDO O QUE SIGNIFICA CADA ETAPA -->
+
+## 4.1. Extract and store climatic information
+
+-   Extracted climatic data is available in three different files:
+    <!-- DOUBLE CHECK!!!! -->
+    -   1\. MinTemperaturaChelsa.rds
+    -   2\. MaxTemperaturaChelsa.rds
+    -   3\. PrecChelsa.rds
+
+Because data download and information extraction is quite time consuming
+a dedicated Jupyter notebook to run on Google Colab is provided in:
+"ChelsaData Download and extraction - Google Colab.ipynb"
+
+Run this Google Colab by typing in your brownser:
+<https://githubtocolab.com/Ecosantos/Demogbuff-pops>
+
+```{r}
+climate_df<-readRDS("Data/climate_df.RDS")
+```
+
+## 4.1. Analyse climatic timeseries, calculate environmental stochasticity and summarise information into a PCA
+
+3 - Climatic variables calculation.R use the already extracted climatic
+data to:
+
+\- Data summary and metrics extraction described in methods
+
+\- Produce final dataset to analyse: "climate_df.RDS"
+
+\- Environmental trend, amplitude, and stochasticisticy
+
+### 4.1.1. Checking collinearity and retaining climatic variables
+
+```{r}
+cor_matrix <- climate_df %>% select(-ID) %>% cor()
+diag(cor_matrix) <- NA  
+
+# Find values higher than 0.65
+high_corr <- which(abs(cor_matrix) > 0.65, arr.ind = TRUE)
+
+# Output to selection
+data.frame(
+  Var1 = rownames(cor_matrix)[high_corr[, 1]],
+  Var2 = colnames(cor_matrix)[high_corr[, 2]],
+  Correlation = cor_matrix[high_corr]
+) %>% arrange(desc(abs(Correlation)))  
+
+# Plot all variables to visualize collinearity
+#climate_df%>%select(-ID)%>%
+#  select(-c(Ampli_season_TMax,
+#            Ampli_season_TMin,
+#            Ampli_season_Prec))%>%
+#  cor()%>%corrplot::corrplot()
+
+## Retaining climatic variables -----
+climate_df<-climate_df%>%select(
+  -c(Mean_trend_TMin,
+  Stoch_noisesize_TMin,Stoch_noisesize_Prec,
+  Ampli_season_TMax,Ampli_season_TMin,Ampli_season_Prec))%>%
+  as_tibble()
+```
+
+### 4.1.2. Climatic/environmental PCA
+
+And its output
+
+```{r}
+# Produce the climatic/environmental PCA
+ClimPCA<-climate_df%>%
+mutate_at(vars(-c(ID)),scale)%>%
+column_to_rownames("ID")%>%
+#cor(.)%>%corrplot::corrplot(.)
+PCA(.,graph=F,scale=FALSE)
+
+ClimPCA$ind$coord
+ClimPCA$eig%>%t()	#Explained variables
+
+
+cowplot::plot_grid(nrow=1,
+cowplot::plot_grid(ncol=1,
+fviz_eig(ClimPCA)+theme_bw(base_size=14),
+fviz_pca(ClimPCA, geom=c("point"))+theme_bw(base_size=14)),
+ClimPCA$var$cor%>%ggcorrplot::ggcorrplot(method = "circle")+theme_bw(base_size=14)+
+  theme(axis.text.x=element_text(angle=75,hjust=1)))+
+coord_fixed(ratio=.60)
+
+
+#ggsave(file="Figures/PCAEnv.svg")
+
+dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
+
+```
+
+```{r}
+
+```
+
+# References
