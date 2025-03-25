@@ -270,7 +270,7 @@ cowplot::plot_grid(
     filter(!(Values<quantile(Values,.025)))%>%
     ggplot(.,aes(x=Values, y =  fct_rev(Trait),fill=Taxa))+
     #geom_density_ridges(aes(fill = Taxa), rel_min_height = 0.01)+
-    geom_density_ridges(aes(fill=Taxa))+
+    ggridges::geom_density_ridges(aes(fill=Taxa))+
     xlab("Pagel's lambda )")+
     scale_fill_manual(values=c("#144375","#1f9a59"))+
     theme_minimal(base_size=16)+
