@@ -819,13 +819,13 @@ RelContrib_df
 
 ```{r message=FALSE, warning=FALSE}
 #Relative contribution by organismType
-RelContrib%>%
-group_by(Kingdom,name,OrganismType)%>%
-summarise(Relativemean=mean(RelativeProp)*100,n=n())%>%
-pivot_wider(names_from=name,values_from = Relativemean)%>%
-group_by(Kingdom)
+RelContrib_orgType<-RelContrib%>%
+  group_by(Kingdom,name,OrganismType)%>%
+  summarise(Relativemean=mean(RelativeProp),n=n(),SD=sd(RelativeProp))
 
-
+RelContrib_orgType%>%
+  mutate(Relativemean=(Relativemean*100),
+         SD=SD*100)
 
 ```
 
@@ -860,9 +860,13 @@ mutate(Variable = factor(Variable, levels = traitLev))
 
 #### Edited figure for plants
 
+<!--# ESSA É UMA VERSÂO ANTIGA TAMBÉM -->
+
 ![](Figures%20edited/Fig2%20plants%20-%20Vital%20rate%20contribution_editada.png){width="500"}
 
 #### All (plot + code)
+
+<!--# ESSA É UMA VERSÂO ANTIGA TAMBÉM -->
 
 ```{r message=FALSE, warning=FALSE}
 plotbuff<-plotbuff_data%>%
@@ -890,7 +894,7 @@ plotbuff
 
 ```{r fig.width=10, message=FALSE, warning=FALSE}
 rbind(
-RelContrib_orgtype,
+RelContrib_orgType,
 RelContrib_df%>%mutate(OrganismType =ifelse(Kingdom=="Animalia", "All_animals","All_plants")))%>%
   mutate(name = str_remove(name, "_SigElas"))%>%
   mutate(name=factor(name, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
@@ -917,6 +921,8 @@ RelContrib_df%>%mutate(OrganismType =ifelse(Kingdom=="Animalia", "All_animals","
 
 
 ```
+
+<!--# ESSA É UMA VERSÂO ANTIGA TAMBÉM -->
 
 ```{r, fig.width=10}
 RelContrib%>%
