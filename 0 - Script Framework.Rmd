@@ -47,15 +47,14 @@ library(MCMCglmm)		#v2.35
 
 ## 0.1. SessionInfo and package versions
 
-<!-- NOTWORKING ON RNOTEBOOK BUT IT IS OK IN CONSOLE!!!! -->
-
 ```{r}
+sessionInfo()
 #Check package versions
-cbind(unlist(loadedNamespaces()),
-  unlist(lapply(
-	lapply(loadedNamespaces(),packageVersion),
-		as.character)))%>%
-		data.frame()%>%arrange(-desc(X1))%>%as_tibble()
+#cbind(unlist(loadedNamespaces()),
+#  unlist(lapply(
+#	lapply(loadedNamespaces(),packageVersion),
+#		as.character)))%>%
+#		data.frame()%>%arrange(-desc(X1))%>%as_tibble()
 ```
 
 # 1. Readme
@@ -75,7 +74,6 @@ by survival-reproduction trade-offs and mediated by aridity
     -   3 - Climatic variables calculation
     -   4 - Analyses with MCMCglmm
     -   5 - Core function: Stochastic elasticities of variance
-        <!--# AAAAAAAAAA -->
 
 # 2. Data selection and cleaning - COMPADRE, COMADRE & MOSAIC
 
@@ -104,7 +102,7 @@ rm(CleanData)	#Remove non-used data to improve memory usage
 
 ```
 
-# 3. LIFE HISTORY TRAITS <br> (Calculate life history traits)
+# 3. Life history traits <br> (Calculate life history traits)
 
 Script avaliable in "2 - Life history traits calculation.R"
 
@@ -126,12 +124,10 @@ column_to_rownames(var = "ID")
 #spLHmat%>%cor()%>%corrplot::corrplot(.,title="Check Colinerarity on LH traits")
 ```
 
-## 3.1 FAST-SLOW CONTINUUM / Life history PCA
+## 3.1 Fast-slow continuum / Life history PCA
 
 -   Perform PCA
-
 -   Check eigenvalues
-
 -   Plot eigenvalues and correlgram
 
 ```{r "life-history PCA"}
@@ -174,11 +170,7 @@ LHtraits<-left_join(by="ID",
 
 ## 4.1. Extract and store climatic information
 
--   Extracted climatic data is available in three different files:
-    <!-- DOUBLE CHECK!!!! -->
-    -   1\. MinTemperaturaChelsa.rds
-    -   2\. MaxTemperaturaChelsa.rds
-    -   3\. PrecChelsa.rds
+Extracted climatic data is available in `Data/Climate_df.RDS`
 
 Because data download and information extraction is quite time consuming
 a dedicated Jupyter notebook to run on Google Colab is provided in:
@@ -196,11 +188,9 @@ climate_df<-readRDS("Data/climate_df.RDS")
 3 - Climatic variables calculation.R use the already extracted climatic
 data to:
 
-\- Data summary and metrics extraction described in methods
-
-\- Produce final dataset to analyse: "climate_df.RDS"
-
-\- Environmental trend, amplitude, and stochasticisticy
+-   Data summary and metrics extraction described in methods
+-   Produce final dataset to analyse: "climate_df.RDS"
+-   Environmental trend, amplitude, and stochasticisticy
 
 ### 4.1.1. Checking collinearity and retaining climatic variables
 
@@ -322,11 +312,9 @@ source("MainFunction - Stochastic elasticities of variance lower level.R")
 
 ```
 
-> Attention: Example where shrinking is possible in Animal
->
-> -   Alternation between reproductive non-reproductive stage
->
->     -   Reproductive estage \<--\> non-reproductive stage
+> Attention: Example where shrinking is possible in Animal - Alternation
+> between reproductive non-reproductive stage - Reproductive estage
+> \<--\> non-reproductive stage
 
 ```{r}
 #filter(Metadata,ID=="Urs2.183_726")$mat
@@ -342,17 +330,16 @@ lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))$`Lower-level Stochastic El
 ## 5.2. Derivating demograpic buffering in plants and animals
 
 -   Derivate demographic buffering in plants and animals
-
 -   Merge into a single dataframe
 
-<!-- COMMENTARY: 
+<!--# COMMENTARY: 
 ElasSigVR_data and StochElasVR_data are simpler versions created without standar desviation because sd was not included in the GLMM model.
 
 The full version ("ElasSigVR_full") is still required to summary
 statistics below in Ranking Buffering.
 -->
 
-```{r echo=FALSE}
+```{r echo=T, message=FALSE, warning=FALSE, results='hide'}
 # Organize unique ID to rethrive matrices to metadata after analyses
 uniqueID<-unique(Metadata$ID)
 
@@ -440,9 +427,6 @@ MPMinfo<-data.frame(
    ID=uniqueID)%>%as_tibble()
 
 
-databuff_data%>%glimpse()
-
-
 databuff_data<-left_join(
  databuff_data,MPMinfo,
 	by=c("ID_SigElas"="ID"))%>%
@@ -499,7 +483,7 @@ merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
 
     -   "any edge == 0" == FALSE
 
-```{r echo=FALSE}
+```{r message=FALSE, warning=FALSE, result='hide'}
 #Make subtree
 sppINphylo<-unique(merged_data$Binomial)[unique(merged_data$Binomial)%in%supertree$tip]
 
@@ -645,11 +629,327 @@ Next steps use this partial output to reproduce the data.
 
 <!-- Talvez seja interessante eu revisar a numeração desses scripts! Por exemplo, script 5 MCMCglmm run parece ser uma péssima opção e grande fonte de confusão no futuro! -->
 
-# 10. MCMCglmm results and tidy
+# 10. Buffering paterns
+
+```{r warning=TRUE}
+final_data_meta<-final_data%>%
+left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
+
+final_data_meta
+```
+
+## 10.1 Ranking buffering
+
+More and less buffered populations
+
+```{r message=FALSE, warning=FALSE}
+#-----------------------------------------------------------------------------------
+#	RANKING BUFFERING
+#-----------------------------------------------------------------------------------
+ToRank<-final_data%>%
+mutate(Cumulative_SigElas=abs(Cumulative_SigElas))%>%
+group_by(Kingdom)%>%
+select(ID,Cumulative_SigElas,SpeciesAccepted,AngioGymno,Class)%>%
+  mutate(rank  = rank(Cumulative_SigElas, ties.method = "random"))
+
+ToRank<-ToRank%>%
+group_by(Kingdom)%>%
+mutate(min=min(Cumulative_SigElas),
+		max=max(Cumulative_SigElas))%>%
+filter(rank==min(rank)|rank==max(rank))%>%
+select(-c(min,max))%>%
+left_join(.,Metadata%>%select(ID, CommonName,Family)%>%distinct(),by="ID")%>%
+select(2,3,7,4,5,6,8,9)
+
+ToRank%>%
+left_join(.,ElasSigVR_full,by="ID")%>%mutate_if(is.numeric,round,3)%>%as.data.frame()
+
+```
+
+## 10.2. Animals and plants overlaps?
+
+Yes!
+
+```{r}
+t.test(abs(final_data$Cumulative_SigElas)~final_data$Kingdom)
+```
+
+### Plot
+
+```{r message=FALSE, warning=FALSE, result='hide'}
+temp<-Stochslambs<-NULL
+for(i in 1:length(unique(final_data$ID))){
+temp<-filter(
+	Metadata,ID==unique(final_data$ID)[i])$mat%>%
+		matA()%>%
+		stoch.growth.rate(.,maxt = 200,verbose = FALSE)
+Stochslambs$approx[[i]]<-temp$approx
+Stochslambs$sim[[i]]<-temp$sim
+Stochslambs$CIlow[[i]]<-temp$sim.CI[[1]]
+Stochslambs$CIhigh[[i]]<-temp$sim.CI[[2]]
+#add verbose 
+	if (i == 1 || i%%40 == 0) {
+              message("Calculating mean Matrices", 
+                 i)
+	}
+rm(temp)
+}
+
+Stochslambs_df<-data.frame(
+	unique(final_data$ID),
+		lapply(Stochslambs,cbind))%>%
+	as_tibble()%>% unnest()%>%
+		mutate_if(is.numeric,exp)%>%
+	rename(., ID = unique.final_data.ID.)
+```
+
+An accessory function is necessary
+
+```{r}
+scientific_10 <- function(x) {
+  parse(text=gsub("e", " %*% 10^", scales::scientific_format()(x)))
+}
+```
+
+Plot
+
+```{r, fig.height=6, fig.width=14}
+final_data%>%
+ select(ID:Cumulative_SigElas,Buffmx:MatRep,OrganismType,Kingdom,lambda)%>%
+ pivot_longer(!c(ID,MatRep:lambda))%>%
+ mutate(values=ifelse(value==0,rnorm(1,1e-7,1e-7),value))%>%
+ left_join(.,Stochslambs_df,by='ID')%>%
+ filter(name=="Cumulative_SigElas")%>%
+ #filter(!(value>quantile(value,.95)))%>%
+ #filter(!(value<quantile(value,.025)))%>%
+ ggplot(.,aes(y=approx,x=abs(value)))+
+# geom_point(aes(size=sqrt(MatRep),fill=Kingdom),shape=21)
+#geom_point(aes(size=sqrt(MatRep),fill=Kingdom),shape=21)+
+geom_pointrange(aes(ymin=CIlow,ymax=CIhigh,fill=Kingdom,shape=Kingdom),size=.9)+
+scale_fill_manual(values=c("#144375","#1f9a59"))+
+scale_shape_manual(values=c(23,21))+
+geom_hline(yintercept=1,linetype=2,color="grey50",size=.9)+
+scale_x_continuous(trans ='log',
+breaks=c(0,0.000001,0.0001,0.001,0.001,0.01,0.1,1),
+label = scientific_10)+
+#annotation_logticks() + 
+#xlab(expression("(More Buffered)            -       " %<-% "        "~Sigma~"E"^"s"^~mu~"        " %->%  "       +            (More Labile)")) +
+xlab(bquote("More Buffered     -         " 
+	%<-% "Relatative effect of environmental variation ("~ abs(sum(E[v]^sigma))~" )" %->%  
+									"       +            More Labile"))+
+ylab(bquote("Stochastic growth rate ("~lambda[s]~")"))+
+#facet_grid(.~name,scales="free")+
+#theme(legend.position="top")+
+theme_minimal(base_size=21)+
+theme(aspect.ratio=6/18)
+
+#ggsave(file="Figures/Buffering continuum.svg")
+
+```
+
+## 10.3. Proportional contribution {.tabset}
+
+```{r}
+RelContrib<-final_data%>%as_tibble()%>%
+select(ID,Reproduction_SigElas:Survival_SigElas)%>%
+mutate_if(is.numeric,abs)%>%
+mutate(NewCumulative=rowSums(across(where(is.numeric))))%>%
+#mutate_if(is.numeric,round,4)%>%glimpse()
+pivot_longer(!c(ID,NewCumulative))%>%
+mutate(RelativeProp=(value/NewCumulative))%>%
+left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
+
+```
+
+### 10.3.1 Plants {.tabset}
+
+#### All plants
+
+```{r message=FALSE, warning=FALSE}
+#Relative contribution with Standard desviation
+RelContrib%>%
+filter(Kingdom=="Plantae")%>%
+group_by(name)%>%
+summarise(Relativemean=mean(RelativeProp)*100,
+		SD=sd(RelativeProp)*100,
+		n=n())
+```
+
+#### By type
+
+```{r message=FALSE, warning=FALSE}
+#Relative contribution by organismType
+RelContrib%>%
+  filter(Kingdom=="Plantae")%>%
+group_by(Kingdom,name,OrganismType)%>%
+summarise(Relativemean=mean(RelativeProp)*100,n=n())%>%
+pivot_wider(names_from=name,values_from = Relativemean)%>%
+group_by(Kingdom)
+
+```
+
+### 10.3.2 Plants & Animals {.tabset}
+
+#### All
+
+```{r message=FALSE, warning=FALSE}
+#Relative contribution with Standard desviation
+RelContrib%>%
+group_by(name)%>%
+summarise(Relativemean=mean(RelativeProp)*100,
+		SD=sd(RelativeProp)*100,
+		n=n())
+```
+
+#### By Kingdom
+
+```{r message=FALSE, warning=FALSE}
+#Relative contribution by kingdon
+RelContrib_df<-RelContrib%>%
+group_by(name,Kingdom)%>%
+summarise(Relativemean=mean(RelativeProp),
+		SD=sd(RelativeProp),
+		n=n())
+
+RelContrib_df
+
+```
+
+#### By Organism types
+
+```{r message=FALSE, warning=FALSE}
+#Relative contribution by organismType
+RelContrib%>%
+group_by(Kingdom,name,OrganismType)%>%
+summarise(Relativemean=mean(RelativeProp)*100,n=n())%>%
+pivot_wider(names_from=name,values_from = Relativemean)%>%
+group_by(Kingdom)
+
+
+
+```
+
+### 10.3.3. Plots {.tabset}
+
+Plots need editing on proper software.
+
+```{r message=FALSE, warning=FALSE}
+taxaLev<-c("Chordata","Arthropoda","Cnidaria",
+	"Annual","Herbaceous perennial","Succulent",
+		"Epiphyte","Shrub","Tree","Palm")
+
+traitLev<-c("Cumulative","Survival","Reproduction","Growth","Shrinking","Clonality")
+
+plotbuff_data<-final_data%>%
+mutate(Taxa=ifelse(Kingdom=="Plantae", OrganismType,Phylum))%>%
+select(c(Reproduction_SigElas:Survival_Base),MatRep,Kingdom,Taxa)%>%
+pivot_longer(!c(Kingdom,MatRep,Taxa),names_to="Variable",values_to="Value")%>%
+group_by(Kingdom,Taxa,Variable)%>%
+summarise(Mean=mean(Value),
+		SD=sd(Value),
+		Populations=n(),
+		MatRep=sum(MatRep),
+		SE=SD/sqrt(Populations),
+		CI=1.96*(SD/sqrt(Populations)))%>%
+separate(Variable, c("Variable", "Form"))%>%
+mutate(Taxa = factor(Taxa , levels = taxaLev))%>%
+mutate(Variable = factor(Variable, levels = traitLev))
+
+#plotbuff_data
+```
+
+#### Edited figure for plants
+
+![](Figures%20edited/Fig2%20plants%20-%20Vital%20rate%20contribution_editada.png){width="500"}
+
+#### All (plot + code)
+
+```{r message=FALSE, warning=FALSE}
+plotbuff<-plotbuff_data%>%
+mutate(Variable=factor(Variable, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
+ggplot(.,aes(x=Variable,y=Mean,group=Taxa))+
+geom_pointrange(position=position_dodge(0.4),
+ aes(ymin = Mean-SE, ymax = Mean+SE,
+ 	fill=Taxa,shape=Kingdom),color="black",linewidth = 1.3,size= 1.1,alpha=.9)+
+ylab(NULL)+xlab(NULL)+
+scale_shape_manual(values=c(23,21))+
+scale_fill_viridis_d()+
+#scale_color_viridis_d()+
+#guides(fill = guide_legend(override.aes=list(shape=c(23,21))))+
+guides(
+alpha= "none",
+fill = guide_legend(override.aes=list(shape=c(23,21),alpha=1)))+
+theme_light(base_size=18)+
+facet_grid(Form~Kingdom,scales="free")+
+coord_flip()
+
+plotbuff
+```
+
+> # !!!!!!NOVA VERSÃO!!!!!!
+
+```{r fig.width=10, message=FALSE, warning=FALSE}
+rbind(
+RelContrib_orgtype,
+RelContrib_df%>%mutate(OrganismType =ifelse(Kingdom=="Animalia", "All_animals","All_plants")))%>%
+  mutate(name = str_remove(name, "_SigElas"))%>%
+  mutate(name=factor(name, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
+  mutate(OrganismType=fct_relevel(OrganismType, "All_plants", "All_animals"))%>%
+  # filter(Kingdom=="Plantae")%>%
+  ggplot(.,aes(x=name,y=Relativemean))+
+  geom_pointrange(position=position_dodge(0.4),
+                  aes(ymin = pmax(Relativemean-SD, 0), ymax = pmin(Relativemean+SD, 1),
+                      fill=OrganismType,shape=Kingdom, group=OrganismType),color="black",linewidth = 1,size= 1.1,alpha=.9)+
+  ylab(NULL)+xlab(NULL)+
+  scale_shape_manual(values=c(23,21))+
+  scale_y_continuous(labels = scales::percent_format())+
+  scale_fill_viridis_d()+
+  #scale_color_viridis_d()+
+  #guides(fill = guide_legend(override.aes=list(shape=c(23,21))))+
+  # guides(
+  #    alpha= "none",
+  # fill = guide_legend(
+  #    override.aes=list(shape=rep(c(23, 21), 
+  #                                length.out=nlevels(factor(RelContrib$OrganismType))), alpha=1)))+
+  theme_light(base_size=18)+
+  facet_grid(.~Kingdom,scales="free")+
+  coord_flip()
+
+
+```
+
+```{r, fig.width=10}
+RelContrib%>%
+  group_by(Kingdom,name,OrganismType)%>%
+  summarise(Relativemean=mean(RelativeProp),SD=sd(RelativeProp))%>%
+#  pivot_wider(names_from=name,values_from = Relativemean)%>%
+#  pivot_longer(!c(Kingdom,OrganismType), names_to="VR", values_to="RelativeProp")%>%
+  mutate(name = str_remove(name, "_SigElas"))%>%
+ # filter(Kingdom=="Plantae")%>%
+  mutate(name=factor(name, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
+  ggplot(.,aes(x=name,y=Relativemean,group=OrganismType))+
+  geom_pointrange(position=position_dodge(0.4),
+                  aes(ymin = Relativemean-SD, ymax = Relativemean+SD,
+                      fill=OrganismType,shape=Kingdom),color="black",linewidth = 1.3,size= 1.1,alpha=.9)+
+  ylab(NULL)+xlab(NULL)+
+  scale_shape_manual(values=c(23,21))+
+  scale_fill_viridis_d()+
+  #scale_color_viridis_d()+
+  #guides(fill = guide_legend(override.aes=list(shape=c(23,21))))+
+  guides(
+    alpha= "none",
+ #  fill = guide_legend(override.aes=list(shape=c(23,21),alpha=1))
+    )+
+  theme_light(base_size=18)+
+  facet_grid(.~Kingdom,scales="free")+
+  coord_flip()
+```
+
+# 11. MCMCglmm results and tidy
 
 Use `Data/MCMCglmm_output.rds` to check estimates and hypotheses testing
 
-## 10.1 Loading GLMM outputs
+## 11.1 Loading GLMM outputs
 
 ```{r}
 
@@ -668,9 +968,9 @@ MCMCglmm_simple_animals<-MCMCglmm_output$Simple_models[[2]]
 rm(MCMCglmm_output)
 ```
 
-## 10.2. Data Harmonization
+## 11.2. Data Harmonization
 
-## 10.2.1 As summary {.tabset}
+## 11.2.1 As summary {.tabset}
 
 <!--REMOVED:
 Output shows all `pMCMC<=0.1` for each model for each vital rate
@@ -766,7 +1066,7 @@ GLMMs_df_summary%>%
 
 ```
 
-## 10.2.2 Posterior distribution
+## 11.2.2 Posterior distribution
 
 Better for figures.
 
@@ -798,9 +1098,11 @@ Posterior_data<-left_join(Posterior_data,
 Posterior_data%>%as_tibble()
 ```
 
-## 10.3. GGPLOT Posterior distribution {.tabset}
+## 11.3. GGPLOT Posterior distribution {.tabset}
 
-### Data
+### Code
+
+Code only
 
 ```{r}
 ggplot_posteriors<-Posterior_data%>%
@@ -830,7 +1132,7 @@ ggplot_posteriors_vr$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait 
 
 ### Posteriors All (plants & animals)
 
-```{r , fig.height=12 }
+```{r , fig.height=12}
 # All vital rates + cumulative + All taxa
 ggplot_posteriors
 
@@ -845,12 +1147,12 @@ ggplot_posteriors_cumu
 
 ### Vital rates
 
-```{r fig.height=16}
+```{r fig.height=16, fig.width=8}
 #  cumulative vr & Plants only
 ggplot_posteriors_vr
 ```
 
-# 11. Estimating Phylogenetic signal
+# 12. Estimating Phylogenetic signal
 
 <!-- #          PHYLO 1
 # Don't remember why it is necessary
@@ -861,9 +1163,9 @@ ggplot_posteriors_vr
 #  mutate(across(c("post.mean":"eff.samp"),as.numeric))
 -->
 
-## 11.1. Create an anxiliary function Creates the new anxilliary function `my.fake.lamb`. 
+## 11.1. Create an anxiliary function Creates the new anxilliary function `my.fake.lamb`.
 
-This function follow was created based on @garamszegi2014
+This function was created based on @garamszegi2014
 
 ```{r}
 my.fake.lamb<-function(model){
@@ -877,7 +1179,7 @@ my.fake.lamb<-function(model){
 }
 ```
 
-## 11.2. Estimating phylogenetic signal for all models
+## 12.2. Estimating phylogenetic signal for all models
 
 Code below use `my.fake.lamb` to estimate phylogenetic signal for all
 models in a list.
@@ -915,12 +1217,13 @@ Phylo_signal_df%>%
             higher95=quantile(Values,.975))
 ```
 
-## 11.3. Comparing phylogenetic signal {.tabset}
+## 12.3. Comparing phylogenetic signal {.tabset}
 
+without significant correlation between phylogenetic signal and
+contribution to buffering capacity
 
-
-
-```{r}
+```{r message=FALSE, warning=FALSE}
+# Summarise phylogenetic signal
 Phylo_summary <- Phylo_signal_df %>%
   filter(!(Trait %in% c("Cumulative","Buffmx")))%>%
   group_by(Taxa,Trait) %>%
@@ -930,18 +1233,39 @@ Phylo_summary <- Phylo_signal_df %>%
     SE = SD / sqrt(n()) )%>%
   mutate(Trait=factor(Trait,levels = c("Survival", "Growth", "Shrinking", "Reproduction", "Clonality")))
 
+# Merge phylogenetic signal (summarized) with relative contribution
+phylo_buffer_df<-left_join(
+Phylo_summary%>%mutate(Kingdom=ifelse(Taxa=="Animals", "Animalia", "Plantae")),
+RelContrib_df%>%mutate(name = str_remove(name, "_SigElas")),
+by=c("Trait" = "name", "Kingdom"),suffix = c(".phylo", ".buffer"))%>%
+  select(-Kingdom)
+
+cor.test(method="spearman",
+  filter(phylo_buffer_df,Taxa=="Plants")$MEDIAN,
+filter(phylo_buffer_df,Taxa=="Plants")$Relativemean
+)
+```
+
+Detailed values for plants
+
+```{r}
 Phylo_summary%>%filter(Taxa=="Plants")
 
 ```
 
-### Bar Plot
+### Bar Plot {.tabset}
+
+#### Plants
+
 ```{r eval=FALSE, include=FALSE}
 #Range of phylogenetic signal for reproduction
 filter(Phylo_signal_df,Trait=="Reproduction" & Taxa=="Plants")$Values%>%range()
 ```
 
 ```{r}
-ggplot(Phylo_summary, aes(x = Trait, y = MEDIAN, fill = Taxa)) +
+Phylo_summary%>%
+  filter(Taxa=="Plants")%>%
+ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
   geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
   geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
                   position = position_dodge(width = 0.9), color = "black", size = 0.8) +
@@ -954,17 +1278,43 @@ ggplot(Phylo_summary, aes(x = Trait, y = MEDIAN, fill = Taxa)) +
 
 ```
 
-### Phylo x buffer plot
-<!-- ADICIONAR -->
+#### Plants & Animals
 
+```{r}
+Phylo_summary%>%
+ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
+  geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
+  geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
+                  position = position_dodge(width = 0.9), color = "black", size = 0.8) +
+  scale_fill_manual(values=c("#144375","#1f9a59"))+
+  labs(x = NULL,
+       y = "Phylogenetic signal \n (Pagel's lambda)") +
+  theme_minimal(base_size=18)+
+  theme(legend.position="top",
+        panel.spacing = unit(2, "lines"))
+
+```
+
+### Phylo x buffer plot
+
+```{r}
+phylo_buffer_df%>%
+  ggplot(data=.,aes(x=Relativemean,y=MEDIAN))+
+  geom_point()+
+  geom_pointrange(aes(ymin=MEDIAN-SD.phylo,ymax=MEDIAN+SD.phylo))+
+  facet_grid(.~Taxa)+
+  labs(x="Relative contribution to buffering capacity",
+       y="Phylogenetic signal")
+```
 
 ### Animals & Plants data
+
 ```{r}
 Phylo_summary
 ```
 
-
 ### Animals & Plants plot
+
 ```{r, fig.height=12,fig.width=6}
 # PLOT
 Phylo_signal_df%>%
@@ -984,6 +1334,8 @@ Phylo_signal_df%>%
   facet_grid(Trait~.,scale="free_y")
 ```
 
+# 
+
 <!--
 
 #### Traceplot if necessary 
@@ -993,7 +1345,7 @@ It is interesting to show model is fine but it is not required. Think carefully 
 It is likely tracepplot will be moved to model or tidy model so it is closer to where it is required. 
 
 #==========================================================================
-#	TRACEPLOT
+#   TRACEPLOT
 #==========================================================================
 
 #require(plotMCMC)
@@ -1017,7 +1369,5 @@ Check_traces<-function(X){
 #Check_traces(MCMCglmm_simple_plants)
 #Check_traces(MCMCglmm_simple_animals)
 -->
-
-
 
 # References
