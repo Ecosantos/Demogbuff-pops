@@ -1,7 +1,7 @@
 Version: 1.0
 
-RestoreWorkspace: Default
-SaveWorkspace: Default
+RestoreWorkspace: Yes
+SaveWorkspace: Yes
 AlwaysSaveHistory: Default
 
 EnableCodeIndexing: Yes
@@ -11,3 +11,4 @@ Encoding: UTF-8
 
 RnwWeave: knitr
 LaTeX: pdfLaTeX
+DisableExecuteRprofile: Yes

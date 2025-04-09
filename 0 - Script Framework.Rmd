@@ -4,23 +4,26 @@ author:
   name: Gabriel Santos 
 date: "`r format(Sys.time(),  '%Y-%m-%d (%H:%M:%S)')`"
 output: 
-  html_notebook:
-    theme: paper 
-    code_folding: hide    
-    toc: yes
+  html_notebook: 
+    theme: paper
+    code_folding: hide
+    toc: true
     toc_float:
       collapsed: true
-    cache: TRUE
+    cache: true
 bibliography: references.bib
 ---
+
+```{r "Clean environment", eval=FALSE, include=FALSE}
+# USE TO CLEAN ENVIRONMENT TIME TO TIME
+# rm(list=ls())
+```
 
 # 0 - Setting
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 set.seed(1)
-
-rm(list=ls())
 
 #Packages
 library(tidyverse)	#v2.0.0
@@ -361,7 +364,7 @@ lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))$`Lower-level Stochastic El
 ElasSigVR_data and StochElasVR_data are simpler versions created without standard desviation because sd was not included in the GLMM model. However, the full version ("ElasSigVR_full") is still required to summary
 statistics below in .-->
 
-```{r echo=T, message=FALSE, warning=FALSE, results='hide'}
+```{r echo=T, message=FALSE, warning=FALSE, results='hide', cache=TRUE, }
 # Organize unique ID to rethrive matrices to metadata after analyses
 uniqueID<-unique(Metadata$ID)
 
@@ -636,7 +639,7 @@ traits<-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"),
 
 ```
 
-## 9.4. OPTIMIZING GLMM MODELS
+## pp9.4. OPTIMIZING GLMM MODELS
 
 Because we run several models with and without phylogenetic correction
 it take a long time to run in a in-house computer. Moreover, a long
