@@ -129,9 +129,9 @@ names(MCMCglmm_simple_plants)[i]<-traits[[i]]
 #'===========================================================
 
 glmmOUT<-list(Simple_models=
-       list(Plants = MCMCglmm_simple_plants,Animals = MCMCglmm_simple_animals),
+       list(Plants = MCMCglmm_simple_plants),
      Phylogenetic_models= 
-       list(Plants = MCMCglmm_phylo_plants,Animals = MCMCglmm_phylo_animals)
+       list(Plants = MCMCglmm_phylo_plants)
      )
 
 #saveRDS(glmmOUT,"Data/MCMCglmm_output.rds")
