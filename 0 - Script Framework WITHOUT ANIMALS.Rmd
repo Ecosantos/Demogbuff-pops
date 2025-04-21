@@ -10,12 +10,15 @@ output:
     toc: true
     toc_float:
       collapsed: true
-    cache: true
+    cache: false
   html_document:
     toc: true
     df_print: paged
 bibliography: references.bib
 ---
+
+
+
 
 ```{r "Clean environment", eval=FALSE, include=FALSE}
 # USE TO CLEAN ENVIRONMENT TIME TO TIME
@@ -128,7 +131,7 @@ rm(CleanData)	#Remove non-used data to improve memory usage
 
 # 3. Life history traits <br> (Calculate life history traits)
 
-Script avaliable in "2 - Life history traits calculation.R"
+Script available in "2 - Life history traits calculation.R"
 
 ```{r eval=FALSE, include=FALSE, echo=TRUE}
 file.edit("2 - Life history traits calculation.R")
@@ -376,7 +379,7 @@ source("MainFunction - Stochastic elasticities of variance lower level.R")
 ElasSigVR_data and StochElasVR_data are simpler versions created without standard deviation because sd was not included in the GLMM model. However, the full version ("ElasSigVR_full") is still required to summary
 statistics below in .-->
 
-```{r echo=T, message=FALSE, warning=FALSE, results='hide', cache=TRUE, }
+```{r eval=FALSE, message=FALSE, warning=FALSE, include=TRUE}
 # Organize unique ID to rethrive matrices to metadata after analyses
 uniqueID<-unique(Metadata$ID)
 
@@ -404,6 +407,22 @@ MatRep[[i]]<-length(lapply(filter(Metadata,ID==uniqueID[i])$mat,matU))
 rm(temp)
 }
 ```
+
+
+<!-- This code have been included to speed up buffering calculation 
+- Buffering calculation is saved in a separate object
+- It helps to remove the variability in the iteration process
+-->
+```{r eval=FALSE, include=FALSE}
+save(uniqueID,Buffmx,MatRep,StochElasVR,ElasSigVR,SigRatioVR,
+       file="Data/buffcalc.RData")
+```
+
+```{r eval=TRUE, include=FALSE}
+load("Data/buffcalc.RData")
+```
+
+
 
 ### 5.2.1. Number of populations with timeseries longer than three
 
@@ -507,21 +526,15 @@ merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
 # 7. Building the super tree and make sure it works on phylogenetic analyses
 
 -   Check must return:
-
-    -   No duplicates: Each species is a tip in the phylogeny
-
-    -   No polytomyes: Methods require no polytomyes so it need to be
-        removed
-
-    -   Is.rooted == TRUE: A phylogeny need a root, it is, an initial
-        state
-
-    -   is.binary == TRUE:
-
-    -   is.ultrametric == TRUE: Ultrametic means branches lenght reflect
-        evolutionary history,
-
-    -   "any edge == 0" == FALSE.
+  -   No duplicates: Each species is a tip in the phylogeny
+  -   No polytomyes: Methods require no polytomyes so it need to be
+      removed
+  -   Is.rooted == TRUE: A phylogeny need a root, it is, an initial
+      state
+  -   is.binary == TRUE:
+  -   is.ultrametric == TRUE: Ultrametic means branches lenght reflect
+      evolutionary history,
+  -   "any edge == 0" == FALSE.
 
 ```{r message=FALSE, warning=FALSE, result='hide'}
 #Make subtree
@@ -610,10 +623,13 @@ data_model
 
 #Transform CUMULATIVE IN ABSOLUTE VALUE
 data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
-
-save(data_model,subtree_Plants,
-     file = "Data/GLMMdata.Rdata")
 ```
+
+Save the data for model selection and inference analyses
+```{r eval=FALSE, include=TRUE}
+save(data_model,subtree_Plants, file = "Data/GLMMdata.Rdata")
+```
+
 
 ## 9.2. Selecting the best model
 
@@ -640,7 +656,7 @@ traits<-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"),
 
 ```
 
-## pp9.4. OPTIMIZING GLMM MODELS
+## 9.4. OPTIMIZING GLMM MODELS
 
 Because we run several models with and without phylogenetic correction
 it take a long time to run in a in-house computer. Moreover, a long
@@ -655,14 +671,12 @@ Next steps use this partial output to keep running the analyses.
 
 <!-- Talvez seja interessante eu revisar a numeração desses scripts! Por exemplo, script 5 MCMCglmm run parece ser uma péssima opção e grande fonte de confusão no futuro! -->
 
-# 10. Buffering paterns
 
-```{r warning=TRUE}
-final_data_meta<-final_data%>%
-left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
+```{r}
 
-final_data_meta
 ```
+
+# 10. Buffering paterns
 
 ## 10.1 Ranking buffering
 
@@ -693,6 +707,7 @@ left_join(.,ElasSigVR_full,by="ID")%>%mutate_if(is.numeric,round,3)
 
 ```
 
+<!-- REMOVED BECAUSE THERE IS NO LONGER ANIMALS IN THE ANALYSES 
 ## 10.2. Animals and plants overlaps?
 
 A simple t-test was used and the answer is **Yes!**
@@ -700,6 +715,9 @@ A simple t-test was used and the answer is **Yes!**
 ```{r}
 t.test(abs(final_data$Cumulative_SigElas)~final_data$Kingdom)
 ```
+
+
+-->
 
 ### Plot
 
@@ -754,7 +772,7 @@ final_data%>%
 # geom_point(aes(size=sqrt(MatRep),fill=Kingdom),shape=21)
 #geom_point(aes(size=sqrt(MatRep),fill=Kingdom),shape=21)+
 geom_pointrange(aes(ymin=CIlow,ymax=CIhigh,fill=Kingdom,shape=Kingdom),size=.9)+
-scale_fill_manual(values=c("#144375","#1f9a59"))+
+scale_fill_manual(values=c("#1f9a59"))+
 scale_shape_manual(values=c(23,21))+
 geom_hline(yintercept=1,linetype=2,color="grey50",size=.9)+
 scale_x_continuous(trans ='log',
@@ -789,7 +807,7 @@ mutate(NewCumulative=rowSums(across(where(is.numeric))))%>%
 #mutate_if(is.numeric,round,4)%>%glimpse()
 pivot_longer(!c(ID,NewCumulative))%>%
 mutate(RelativeProp=(value/NewCumulative))%>%
-left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
+left_join(.,MetadataClean%>%select(-lambda, -mat)%>%distinct(),by="ID")
 
 RelContrib%>%mutate_if(is.numeric,round,5)
 
@@ -925,8 +943,7 @@ cowplot::plot_grid(ncol=1,labels="AUTO",
 
 #### Plot proportional contribution
 
-Proportional contribution of each $|E_{v}^\sigma|$ to
-$|\sum E_{v}^\sigma|$
+Proportional contribution of each $|E_{v}^\sigma|$ to $|\sum E_{v}^\sigma|$
 
 ```{r fig.width=13, message=FALSE, warning=FALSE}
 

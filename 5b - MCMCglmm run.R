@@ -71,20 +71,7 @@ glmmScale<-"FALSE"
 #'-----------------------------------------------------------
 ##	----- PHYLOGENETIC MCMC GLMM -----
 #'-----------------------------------------------------------
-MCMCglmm_phylo_animals<-MCMCglmm_phylo_plants<-NULL
-
-#Animals	phylo
-for(i in 1:length(traits)){
-print(paste("Running model:",traits[i],"~",fixEffect))
-MCMCglmm_phylo_animals[[i]]<-MCMCglmm(formula(paste0(traits[i], fixEffect)),
-    random=~phylo,family="gaussian",
-		ginverse=list(phylo=inverseA(subtree_Animals,nodes="TIPS",scale=TRUE)$Ainv),
-				prior=prior_phylo,data=subset(data_model,Kingdom=="Animalia"),
-   						nitt=nitt,burnin=burnin,thin=thin,singular.ok=TRUE, scale = glmmScale)
-
-names(MCMCglmm_phylo_animals)[i]<-traits[[i]]
-}
-
+MCMCglmm_phylo_plants<-NULL
 
 #Plants
 for(i in 1:length(traits)){
@@ -101,17 +88,7 @@ names(MCMCglmm_phylo_plants)[i]<-traits[[i]]
 #'===========================================================
 ##	----- SIMPLE MCMC GLMM -----
 #'===========================================================
-MCMCglmm_simple_animals<-MCMCglmm_simple_plants<-NULL
-
-#Animals
-for(i in 1:length(traits)){
-print(paste("Running model:",traits[i],"~",fixEffect))
-MCMCglmm_simple_animals[[i]]<-MCMCglmm(formula(paste0(traits[i], fixEffect)),
-    family="gaussian",data=subset(data_model,Kingdom=="Animalia"),
-   			nitt=nitt,burnin=burnin,thin=thin,singular.ok=TRUE, scale = glmmScale)
-
-names(MCMCglmm_simple_animals)[i]<-traits[[i]]
-}
+MCMCglmm_simple_plants<-NULL
 
 #Plants
 for(i in 1:length(traits)){
