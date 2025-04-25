@@ -1,16 +1,16 @@
 ---
 title: "A general framework to run analyses in Santos et al.xxxxx"
 author:
-  name: Gabriel Santos 
+  name: Gabriel Santos
 date: "`r format(Sys.time(),  '%Y-%m-%d (%H:%M:%S)')`"
-output: 
-  html_notebook: 
+output:
+  html_notebook:
     theme: paper
     code_folding: hide
     toc: true
     toc_float:
       collapsed: true
-    cache: true
+    cache: false
 bibliography: references.bib
 ---
 
@@ -65,10 +65,7 @@ sessionInfo()
 
 <!--# TODO: FALTA AJUSTAR A ORDEM DIREITO PARA REFLETIR AS MUDANÇAS NOS ARQUIVOS. Ex. TidyMCMC e Run MCMC in Google colab -->
 
-The following script provide the general framework used to analyse
-demographic buffering continuum in Santos et al. (*in review*).
-Population responses to environmental stochasticity are primarily driven
-by survival-reproduction trade-offs and mediated by aridity
+The following script provide the general framework used to analyse demographic buffering continuum in Santos et al. (*in review*). Population responses to environmental stochasticity are primarily driven by survival-reproduction trade-offs and mediated by aridity
 
 -   Intermediary code and data steps are sourced along the framework
 -   Intermediary code and data include:
@@ -76,17 +73,20 @@ by survival-reproduction trade-offs and mediated by aridity
     -   2 - Life history traits calculation and its intermediary data
     -   3 - Climatic variables calculation
     -   4 - Analyses with MCMCglmm
-        -   It includes a separate model selection analyses to decide
-            the most plausible model to use along the analyses
+        -   It includes a separate model selection analyses to decide the most plausible model to use along the analyses
     -   5 - Core function: Stochastic elasticities of variance
 
-# 2. Data selection and cleaning - COMPADRE, COMADRE & MOSAIC
+# 2. Data selection and cleaning - load population models & phylogenetic information
 
 -   Script avaliable in "1 - Data cleaning and selection.R"
+
+```{markdown}
+file.edit("1 - Data cleaning and selection.R")
+```
+
 -   Produce two datasets:
-    -   CleanData: Filter matrix singularity, presence of fecundity,
-        individual matrices only
-    -   Supertree: extract supertree from MOSAIC database (@bernard2023)
+    -   `CleanData.RDS`: Filter matrix singularity, presence of fecundity,individual matrices only
+    -   `supertree.RDS`: extract supertree from MOSAIC database (@bernard2023)
 
 ```{r}
 # Load cleaned data
@@ -109,28 +109,28 @@ rm(CleanData)	#Remove non-used data to improve memory usage
 
 # 3. Life history traits <br> (Calculate life history traits)
 
-Script avaliable in "2 - Life history traits calculation.R"
+Script available in "2 - Life history traits calculation.R"
 
--   Produce:
-    -   dataset LHtraits.RDS:
-    -   Calculate life history traits and detect outliers
-    -   Life history traits include:
--   $L$ : reproductive window
--   $L_a$: mean age at first reproduction
--   $L_a prop$
--   $e$
--   $D$
--   Growth ($\gamma$): individual development
--   $H$
--   
--   Mahalanobis distance
--   is.outlier: TRUE or FALSE to indicate outliers detected with
-    Mahalanobis distance
+```{r eval=FALSE, include=TRUE}
+file.edit("2 - Life history traits calculation.R")
+```
 
-<!--# LETRAS NA TABELA E NO SCRIPT ESTÂO ERRADAS NO SENTIDO DE QUE NÃO REFLETEM BEM A NOMECLATURA COMUMENTE UTILIZADA. VERIFICAR SE ISSO PRECISA SER REVISADO EM TODOS OS SCRIPTS OU APENAS NA TABELA FINAL JÁ RESOLVE -->
+-   Produces dataset `LHtraits.RDS`:
+-   Calculate life history traits and detect outliers
+-   Life history traits include:
+    -   `D`: Reproductive window ($L$)
+        -   Temporal spread of reproduction throughout life span as quantified by @demetrius1974 's entropy ($S$).
+            -   High/low $S$ values correspond to iteroparous/semelparous populations
+    -   `La`: Mean age at first reproduction ($L_a$)
+        -   Average amount of time from birth to reproduction
+    -   `LaProp`: Probability of an individual become reproductive along their lifetime ($p_a$)
+    -   `e`: Mean life expectancy ($\eta _e$)
+    -   `growth`: individual development ($\gamma$)
+    -   `H`: Distribution of mortality risk along the life cycle ($H$)
+-   **`mahal.dist`** The mahalanobis distance
+-   `is.outlier`: TRUE or FALSE to indicate outliers detected with Mahalanobis distance
 
 ```{r}
-#file.edit("2 - Life history traits calculation.R")
 LHtraits<-readRDS("Data/LHtraits.RDS")
 LHtraits
 ## .. Filter outliers ----
@@ -149,7 +149,7 @@ column_to_rownames(var = "ID")
 -   Check eigenvalues
 -   Plot eigenvalues and correlogram
 
-```{r "life-history PCA"}
+```{r "life-history PCA",  fig.width=16,  fig.height=8}
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
 # LHpca - Map variables
@@ -185,20 +185,15 @@ LHtraits<-left_join(by="ID",
 
 # 4. Climate variables and environmental PCA <br>
 
-Extract and store climatic data from CHELSAcruts (@karger2017) in an
-intermediary dataset, remove collinear variable, perform environmental
-PCA and plot PCA's axes across the globe
+Extract and store climatic data from CHELSAcruts (@karger2017) in an intermediary dataset, remove collinear variable, perform environmental PCA and plot PCA's axes across the globe
 
 ## 4.1. Extract and store climatic information
 
 Extracted climatic data is available in `Data/Climate_df.RDS`
 
-Because data download and information extraction is quite time consuming
-a dedicated Jupyter notebook to run on Google Colab is provided:
-"ChelsaData Download and extraction - Google Colab.ipynb"
+Because data download and information extraction is quite time consuming a dedicated Jupyter notebook to run on Google Colab is provided: `ChelsaData Download and extraction - Google Colab.ipynb`
 
-Run this Google Colab by typing in your brownser:
-<https://githubtocolab.com/Ecosantos/Demogbuff-pops>
+Run this Google Colab by typing in your brownser: <https://githubtocolab.com/Ecosantos/Demogbuff-pops>
 
 ```{r}
 climate_df<-readRDS("Data/climate_df.RDS")
@@ -206,8 +201,7 @@ climate_df<-readRDS("Data/climate_df.RDS")
 
 ## 4.1. Analyse climatic timeseries, calculate environmental stochasticity and summarise information into a PCA
 
-3 - `Climatic variables calculation.R` use the already extracted
-climatic data to:
+3 - `Climatic variables calculation.R` use the already extracted climatic data to:
 
 -   Produce data summary and extract metrics described in methods
 -   Produce final dataset to analyse: `climate_df.RDS`
@@ -255,7 +249,7 @@ climate_df<-climate_df%>%select(
 
 Run environmental PCA and show its output
 
-```{r}
+```{r,  fig.width=16,  fig.height=8}
 # Produce the climatic/environmental PCA
 ClimPCA<-climate_df%>%
 mutate_at(vars(-c(ID)),scale)%>%
@@ -275,17 +269,22 @@ ClimPCA$var$cor%>%ggcorrplot::ggcorrplot(method = "circle")+theme_bw(base_size=1
   theme(axis.text.x=element_text(angle=75,hjust=1)))+
 coord_fixed(ratio=.60)
 
-
-#ggsave(file="Figures/PCAEnv.svg")
-
 dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
 
 ```
 
+```{markdown eval=FALSE, include=FALSE}
+ggsave(file="Figures/PCAEnv.svg")
+```
+
 ### 4.3 Mapping climatic axes
 
-```{r message=FALSE, warning=FALSE}
-Plot_clim<-Metadata%>%dplyr::select(.,c(ID,Lat,Lon))%>%
+Plot spatial distribution of studies with climatic data available as well as the values of the two main principal component analyses: life-history and environmental PCAs
+
+```{r message=FALSE, warning=FALSE,  fig.width=16,  fig.height=9,dev=c("png","svg")}
+Plot_clim<-Metadata%>%
+  filter(Kingdom=="Plantae")%>%
+  dplyr::select(.,c(ID,Lat,Lon))%>%
 distinct(.,.keep_all=T)%>%
 left_join(.,
 data.frame(ClimPCA$ind$coord)%>%rownames_to_column(.,var="ID"),
@@ -304,9 +303,8 @@ geom_map(
 
 gmap +
  geom_point(
-    data = left_join(Plot_clim,distinct(MetadataClean,ID,.keep_all=T)%>%select(ID,Kingdom)),
-    aes(x=Lon, y=Lat, fill = Dim.1,stroke=.3,size=Dim.2,shape=Kingdom))+
-scale_shape_manual(values=c(23,21))+
+    data = left_join(Plot_clim,distinct(MetadataClean,ID,.keep_all=T)%>%select(ID)),
+    aes(x=Lon, y=Lat, fill = Dim.1,stroke=.3,size=Dim.2),shape=21)+
 scale_fill_viridis(option="magma")+
 scale_size(range = c(1.5, 5))+
  theme_void()
@@ -320,38 +318,18 @@ scale_size(range = c(1.5, 5))+
 
 ## 5.1. Sourcing main function used in this calculation
 
-Main function calculates the stochastic elasticities within respect to
-variance of lower level vital rates
+Main function calculates the stochastic elasticities within respect to variance of lower level vital rates
 
 -   This script creates the following functions:
 
-    1.  `My.vitalRatePerturbation`: produce the stochastic elasticity
-        with respect to variance $| \sum E_v^\sigma |$
+    1.  `My.vitalRatePerturbation`: produce the stochastic elasticity with respect to variance $| \sum E_v^\sigma |$
 
-        -   This function is an adaptation of `VitalRatePerturbation`
-            function in the `Rage` package (see @jones2022)
+        -   This function is an adaptation of `VitalRatePerturbation` function in the `Rage` package (see @jones2022)
 
-    2.  `array_to_matrix`: an ancillary function to transform timeseries
-        of MPMs, usually returned as an array element to a timeserie of
-        MPM in a object class matrix.
+    2.  `array_to_matrix`: an ancillary function to transform timeseries of MPMs, usually returned as an array element to a timeserie of MPM in a object class matrix.
 
 ```{r}
 source("MainFunction - Stochastic elasticities of variance lower level.R")
-
-```
-
-> Attention: Example where shrinking is possible in Animal - Alternation
-> between reproductive non-reproductive stage - Reproductive estage
-> \<--\> non-reproductive stage
-
-```{r}
-#filter(Metadata,ID=="Urs2.183_726")$mat
-#lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matA)
-
-my.vitalRatePerturbation(
-lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matU),
-lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matF),
-lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))$`Lower-level Stochastic Elasticity with respect to the mean`
 
 ```
 
@@ -362,9 +340,9 @@ lapply(filter(Metadata,ID=="Urs2.183_726")$mat,matC))$`Lower-level Stochastic El
 
 <!-- COMMENTARY: 
 ElasSigVR_data and StochElasVR_data are simpler versions created without standard desviation because sd was not included in the GLMM model. However, the full version ("ElasSigVR_full") is still required to summary
-statistics below in .-->
+statistics below in 10. Buffering patterns -->
 
-```{r echo=T, message=FALSE, warning=FALSE, results='hide', cache=TRUE, }
+```{markdown, eval=FALSE, message=TRUE, warning=FALSE, include=TRUE}
 # Organize unique ID to rethrive matrices to metadata after analyses
 uniqueID<-unique(Metadata$ID)
 
@@ -391,6 +369,21 @@ MatRep[[i]]<-length(lapply(filter(Metadata,ID==uniqueID[i])$mat,matU))
 	}
 rm(temp)
 }
+```
+
+<!-- This code have been included to speed up buffering calculation 
+- Buffering calculation is now saved in a separate object
+  - It helps to remove the variability in the iteration process
+- Main code to calculate demographic buffering is now in markdown format to avoid running it unintentionaly
+-->
+
+```{r eval=FALSE, include=FALSE}
+save(uniqueID,Buffmx,MatRep,StochElasVR,ElasSigVR,SigRatioVR,
+       file="Data/buffcalc.RData")
+```
+
+```{r eval=TRUE, include=FALSE}
+load("Data/buffcalc.RData")
 ```
 
 ### 5.2.1. Number of populations with timeseries longer than three
@@ -435,16 +428,15 @@ filter(complete.cases(.))
 
 ### 5.2.3. Produce a definitive demographic buffering data frame
 
-This new data frame will be ready for merging with climatic data and
-life history traits
+This new data frame will be ready for merging with climatic data and life history traits
 
-```{r}
+```{r, result="asis"}
 databuff_data<-left_join(
 ElasSigVR_data%>%setNames(paste0(names(.),'_SigElas')),
 StochElasVR_data%>%setNames(paste0(names(.),'_Base')),
 by=c("ID_SigElas"="ID_Base"))
 
-databuff_data%>%glimpse()
+databuff_data
 
 MPMinfo<-data.frame(
  Buffmx=unlist(Buffmx),
@@ -498,16 +490,13 @@ merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
 
     -   No duplicates: Each species is a tip in the phylogeny
 
-    -   No polytomyes: Methods require no polytomyes so it need to be
-        removed
+    -   No polytomyes: Methods require no polytomyes so it need to be removed
 
-    -   Is.rooted == TRUE: A phylogeny need a root, it is, an initial
-        state
+    -   Is.rooted == TRUE: A phylogeny need a root, it is, an initial state
 
     -   is.binary == TRUE:
 
-    -   is.ultrametric == TRUE: Ultrametic means branches lenght reflect
-        evolutionary history,
+    -   is.ultrametric == TRUE: Ultrametic means branches lenght reflect evolutionary history,
 
     -   "any edge == 0" == FALSE.
 
@@ -584,13 +573,7 @@ column_to_rownames("Binomial")%>%
 select(where(is.numeric),Kingdom)%>% # Old "select(is.numeric,Kingdom)%>%" but deprecated in recent versions of tidyverse
 select(-c(Clonality_Base,Clonality_SigElas))
 
-
-PhyloSig_data_ANIMALS<-PhyloSig_data%>%filter(Kingdom=="Animalia")%>%select(-Kingdom)
 PhyloSig_data_PLANTS<-PhyloSig_data%>%filter(Kingdom=="Plantae")%>%select(-Kingdom)
-PhyloSig_data_ALL<-PhyloSig_data%>%select(-Kingdom)
-
-
-subtree_Animals<-keep.tip(subtree, rownames(PhyloSig_data_ANIMALS))
 subtree_Plants<-keep.tip(subtree, rownames(PhyloSig_data_PLANTS))
 ```
 
@@ -598,9 +581,7 @@ subtree_Plants<-keep.tip(subtree, rownames(PhyloSig_data_PLANTS))
 
 ## 9.1. A separate dataset was created `data_model`
 
-Data_model now includes absolute values of sum of stochastic elasticity
-within respect to variance $| \sum E_v^\sigma |$ (i.e,
-cumulativa_SigEla).[^1]
+Data_model now includes absolute values of sum of stochastic elasticity within respect to variance $| \sum E_v^\sigma |$ (i.e, cumulativa_SigEla).[^1]
 
 ```{r}
 data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))
@@ -609,9 +590,11 @@ data_model
 
 #Transform CUMULATIVE IN ABSOLUTE VALUE
 data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
+```
 
-#save(data_model,subtree_Animals,subtree_Plants,
-#     file = "Data/GLMMdata.Rdata")
+```{markdown eval=FALSE, include=FALSE}
+save(data_model,subtree_Animals,subtree_Plants,
+     file = "Data/GLMMdata.Rdata")
 ```
 
 ## 9.2. Selecting the best model
@@ -620,11 +603,7 @@ data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 
 ## 9.3. Determine the fixed effect of all models and response variables
 
-Because we run multiple models representing the combination of several
-attributes (vital rates, ex. survival and reproduction) for the same
-fixed model, each element below is important to automatize the process.
-With each element created separated we can run a loop with a generic
-model where `model(variable ~ fixEffect)`
+Because we run multiple models representing the combination of several attributes (vital rates, ex. survival and reproduction) for the same fixed model, each element below is important to automatize the process. With each element created separated we can run a loop with a generic model where `model(variable ~ fixEffect)`
 
 ```{r}
 # Determines the fixed effect component
@@ -639,16 +618,11 @@ traits<-traits_glmm<- unique (grep(paste(InterestingVars,collapse="|"),
 
 ```
 
-## pp9.4. OPTIMIZING GLMM MODELS
+## 9.4. OPTIMIZING GLMM MODELS
 
-Because we run several models with and without phylogenetic correction
-it take a long time to run in a in-house computer. Moreover, a long
-script was created `5b - MCMCglmm run.R`. Thus, to accelerate the model
-performance and save time we also created a jupyter notebook integrated
-with Google Collab `5b - MCMCglmm run.ipynb`.
+Because we run several models with and without phylogenetic correction it take a long time to run in a in-house computer. Moreover, a long script was created `5b - MCMCglmm run.R`. Thus, to accelerate the model performance and save time we also created a jupyter notebook integrated with Google Collab `5b - MCMCglmm run.ipynb`.
 
-Most importantly, a partial output was created with the GLMM models in
-`Data/MCMCglmm_output.rds`.
+Most importantly, a partial output was created with the GLMM models in `Data/MCMCglmm_output.rds`.
 
 Next steps use this partial output to keep running the analyses.
 
@@ -665,8 +639,7 @@ final_data_meta
 
 ## 10.1 Ranking buffering
 
-Rank more and less buffered populations. Again sum of stochastic
-elasticity within respect to variance $| \sum E_v^\sigma |$ is used.
+Rank more and less buffered populations. Again sum of stochastic elasticity within respect to variance $| \sum E_v^\sigma |$ is used.
 
 ```{r message=FALSE, warning=FALSE}
 #-----------------------------------------------------------------------------------
@@ -688,7 +661,7 @@ left_join(.,Metadata%>%select(ID, CommonName,Family)%>%distinct(),by="ID")%>%
 select(2,3,7,4,5,6,8,9)
 
 ToRank%>%
-left_join(.,ElasSigVR_full,by="ID")%>%mutate_if(is.numeric,round,3)
+left_join(.,ElasSigVR_full,by="ID")%>%mutate_if(is.numeric,round,3)%>%filter(Kingdom=="Plantae")
 
 ```
 
@@ -729,8 +702,7 @@ Stochslambs_df<-data.frame(
 	rename(., ID = unique.final_data.ID.)
 ```
 
-An accessory function is necessary to better represent very small
-numbers.
+An accessory function is necessary to better represent very small numbers.
 
 ```{r}
 scientific_10 <- function(x) {
@@ -746,15 +718,13 @@ final_data%>%
  pivot_longer(!c(ID,MatRep:lambda))%>%
  mutate(values=ifelse(value==0,rnorm(1,1e-7,1e-7),value))%>%
  left_join(.,Stochslambs_df,by='ID')%>%
- filter(name=="Cumulative_SigElas")%>%
+ filter(name=="Cumulative_SigElas" & Kingdom=="Plantae")%>%
  #filter(!(value>quantile(value,.95)))%>%
  #filter(!(value<quantile(value,.025)))%>%
  ggplot(.,aes(y=approx,x=abs(value)))+
 # geom_point(aes(size=sqrt(MatRep),fill=Kingdom),shape=21)
 #geom_point(aes(size=sqrt(MatRep),fill=Kingdom),shape=21)+
-geom_pointrange(aes(ymin=CIlow,ymax=CIhigh,fill=Kingdom,shape=Kingdom),size=.9)+
-scale_fill_manual(values=c("#144375","#1f9a59"))+
-scale_shape_manual(values=c(23,21))+
+geom_pointrange(aes(ymin=CIlow,ymax=CIhigh),shape=21,fill="#1f9a59",size=.9)+
 geom_hline(yintercept=1,linetype=2,color="grey50",size=.9)+
 scale_x_continuous(trans ='log',
 breaks=c(0,0.000001,0.0001,0.001,0.001,0.01,0.1,1),
@@ -776,9 +746,7 @@ theme(aspect.ratio=6/18)
 
 ## 10.3. Proportional contribution {.tabset}
 
-Quantify proportional contribution of each vital rate to
-$| \sum E_v^\sigma |$. We used percentage `RelContrib*100` to improve
-readability.
+Quantify proportional contribution of each vital rate to $| \sum E_v^\sigma |$. We used percentage `RelContrib*100` to improve readability.
 
 ```{r}
 RelContrib<-final_data%>%as_tibble()%>%
@@ -790,7 +758,7 @@ pivot_longer(!c(ID,NewCumulative))%>%
 mutate(RelativeProp=(value/NewCumulative))%>%
 left_join(.,MetadataClean%>%select(-lambda)%>%distinct(),by="ID")
 
-RelContrib%>%mutate_if(is.numeric,round,5)
+RelContrib%>%mutate_if(is.numeric,round,5)%>%filter(Kingdom=="Plantae")
 
 ```
 
@@ -821,7 +789,7 @@ RelContrib_orgType<-RelContrib%>%
 
 RelContrib_orgType%>%
   mutate(Relativemean=(Relativemean*100),
-         SD=SD*100)%>%mutate_if(is.numeric,round,3)
+         SD=SD*100)%>%mutate_if(is.numeric,round,3)%>%filter(Kingdom=="Plantae")%>%ungroup()%>%select(-Kingdom)
 
 ```
 
@@ -856,14 +824,9 @@ mutate(Variable = factor(Variable, levels = traitLev))
 
 #### Edited figure for plants
 
-<!--#TODO: EDITAR E TROCAR FIGURA ASSIM QUE FICAR PRONTA-->
-
-![](Figures%20edited/Fig2%20plants%20-%20Vital%20rate%20contribution_editada.png){width="500"}
-
 #### Plot Elasticities
 
-Plot shows stochastic elasticities of each vital rate (A) and its
-relative effect on $\lambda_{s}$, it means $E_{v}^\sigma$
+Plot shows stochastic elasticities of each vital rate (A) and its relative effect on $\lambda_{s}$, it means $E_{v}^\sigma$
 
 <!--# mutate(IsMean="NO") it is important to highlight what points represent the mean for the Kingdom-->
 
@@ -924,8 +887,7 @@ cowplot::plot_grid(ncol=1,labels="AUTO",
 
 #### Plot proportional contribution
 
-Proportional contribution of each $|E_{v}^\sigma|$ to
-$|\sum E_{v}^\sigma|$
+Proportional contribution of each $|E_{v}^\sigma|$ to $|\sum E_{v}^\sigma|$
 
 ```{r fig.width=13, message=FALSE, warning=FALSE}
 
@@ -933,7 +895,8 @@ RelContrib_plot<-rbind(
   RelContrib_orgType%>%mutate(IsMean="NO"),
   RelContrib_df%>%mutate(Taxa =ifelse(Kingdom=="Animalia", "All_animals","All_plants"))%>%
     mutate(IsMean="YES"))%>%
-  mutate(name = str_remove(name, "_SigElas"))%>%
+filter(Kingdom=="Plantae")%>%
+    mutate(name = str_remove(name, "_SigElas"))%>%
   mutate(name=factor(name, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
   mutate(Taxa=fct_relevel(Taxa, "All_plants", "All_animals"))%>%
   mutate(Form="SigElas")%>%
@@ -941,7 +904,7 @@ RelContrib_plot<-rbind(
   ggplot(.,aes(x=name,y=Relativemean))+
   geom_pointrange(position=position_dodge(0.4),
                   aes(ymin = pmax(Relativemean-SD, 0), ymax = pmin(Relativemean+SD, 1),
-                      fill=Taxa,shape=Kingdom, group=Taxa,color=IsMean),linewidth = 1,size= 1.1,alpha=.9)+
+                      fill=Taxa,group=Taxa,color=IsMean),shape=21,linewidth = 1,size= 1.1,alpha=.9)+
   ylab(NULL)+xlab(NULL)+
   scale_shape_manual(values=c(23,21))+
   scale_color_manual(values=c("black","red"))+
@@ -967,9 +930,9 @@ Provide the raw figure for posterior editing in proper software
 
 ```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE}
 cowplot::plot_grid(
-  plotbuff_base+ylab(expression(paste("Vital rate elasticity ( ",E[v]," )"))),
+  plotbuff_base+theme(legend.position="none")+ylab(expression(paste("Vital rate elasticity ( ",E[v]," )"))),
   RelContrib_plot+ylab(bquote("Proportional contribution to ("~ sum(E[v]^sigma)~" )")),
-    ncol=1,labels="AUTO")
+    ncol=2,labels="AUTO")
 
 ```
 
@@ -987,11 +950,9 @@ lapply(MCMCglmm_output,names)
 
 # Phylogenetic models
 MCMCglmm_phylo_plants<-MCMCglmm_output$Phylogenetic_models[[1]]
-MCMCglmm_phylo_animals<-MCMCglmm_output$Phylogenetic_models[[2]]
 
 # Non-Phylogenetic (simple) models
 MCMCglmm_simple_plants<-MCMCglmm_output$Simple_models[[1]]
-MCMCglmm_simple_animals<-MCMCglmm_output$Simple_models[[2]]
 
 rm(MCMCglmm_output)
 ```
@@ -1008,44 +969,27 @@ It works better for script but not for notebook/markdown report
 Use this for data summary along the text
 
 ```{r message=FALSE, warning=FALSE}
-Phylo_models_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) summary(inner_list))
 Phylo_models_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) summary(inner_list))
 
-Simple_models_animals<-lapply(MCMCglmm_simple_animals,function(inner_list) summary(inner_list))
 Simple_models_plants<-lapply(MCMCglmm_simple_plants,function(inner_list) summary(inner_list))
 
 
-Phylo_models_animals_coefs<-lapply(Phylo_models_animals,function(inner_list) inner_list[[5]])
 Phylo_models_plants_coefs<-lapply(Phylo_models_plants,function(inner_list) inner_list[[5]])
-
-Simple_models_animals_coefs<-lapply(Simple_models_animals,function(inner_list) inner_list[[5]])
 Simple_models_plants_coefs<-lapply(Simple_models_plants,function(inner_list) inner_list[[5]])
 
-
-Phylo_models_animals_coefs<-lapply(Phylo_models_animals_coefs,as.data.frame)
 Phylo_models_plants_coefs<-lapply(Phylo_models_plants_coefs,as.data.frame)
-
-Simple_models_animals_coefs<-lapply(Simple_models_animals_coefs,as.data.frame)
 Simple_models_plants_coefs<-lapply(Simple_models_plants_coefs,as.data.frame)
 
 
 Phylo_models_df_plants<-lapply(Phylo_models_plants_coefs,rownames_to_column, var = "Statistics")%>%
   Map(cbind, Trait = names(.),Taxa="Plants", Model="Phylo", .)%>%do.call(rbind,.)
 
-Phylo_models_df_animals<-lapply(Phylo_models_animals_coefs,rownames_to_column, var = "Statistics")%>%
-  Map(cbind, Trait = names(.),Taxa="Animals",Model="Phylo", .)%>%do.call(rbind,.)
-
-
 Simple_models_df_plants<-lapply(Simple_models_plants_coefs,rownames_to_column, var = "Statistics")%>%
   Map(cbind, Trait = names(.),Taxa="Plants", Model="Simple", .)%>%do.call(rbind,.)
 
-Simple_models_df_animals<-lapply(Simple_models_animals_coefs,rownames_to_column, var = "Statistics")%>%
-  Map(cbind, Trait = names(.),Taxa="Animals",Model="Simple", .)%>%do.call(rbind,.)
 
-
-
-GLMMs_df<-rbind(Phylo_models_df_plants,Phylo_models_df_animals,
-                Simple_models_df_plants,Simple_models_df_animals)
+GLMMs_df<-rbind(Phylo_models_df_plants,
+                Simple_models_df_plants)
 
 
 colnames(GLMMs_df)<-c("Trait","Taxa","Model","Statistics","post.mean","low95","high95","eff.samp","pMCMC")
@@ -1098,16 +1042,12 @@ GLMMs_df_summary%>%
 Better for figures.
 
 ```{r}
-Phylo_posterior_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) data.frame(inner_list$Sol,Taxa="Animals",Model="Phylo"))
 Phylo_posterior_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) data.frame(inner_list$Sol,Taxa="Plants",Model="Phylo"))
 
-Simple_posterior_animals<-lapply(MCMCglmm_simple_animals,function(inner_list) data.frame(inner_list$Sol,Taxa="Animals",Model="Simple"))
 Simple_posterior_plants<-lapply(MCMCglmm_simple_plants,function(inner_list) data.frame(inner_list$Sol,Taxa="Plants",Model="Simple"))
 
 Posterior_data<-rbind(
-  do.call(rbind,Phylo_posterior_animals),
   do.call(rbind,Phylo_posterior_plants),
-  do.call(rbind,Simple_posterior_animals),
   do.call(rbind,Simple_posterior_plants))%>%
   rownames_to_column(., var = "VAR")%>%
   separate(VAR,c("Trait"))%>%
@@ -1134,6 +1074,7 @@ Code only
 ```{r}
 ggplot_posteriors<-Posterior_data%>%
   filter(Trait!="Buffmx")%>%
+  mutate(Trait = factor(Trait , levels = c("Cumulative", "Survival","Growth","Shrinking", "Reproduction", "Clonality")))%>%
   ggplot(.,aes(x=Variables,y=Values,group=Model))+
   geom_hline(yintercept=0,linetype=2,color="grey50",linewidth=1.4)+
   stat_pointinterval(position=position_dodge(.5),.width = c(.66, .95),
@@ -1159,7 +1100,7 @@ ggplot_posteriors_vr$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait 
 
 ### Posteriors All (plants & animals)
 
-```{r , fig.height=12}
+```{r , fig.height=12, fig.width=8}
 # All vital rates + cumulative + All taxa
 ggplot_posteriors
 
@@ -1174,7 +1115,7 @@ ggplot_posteriors_cumu
 
 ### Vital rates
 
-```{r fig.height=16, fig.width=8}
+```{r dev=c('png','svg'), fig.height=16, fig.width=8}
 #  cumulative vr & Plants only
 ggplot_posteriors_vr
 ```
@@ -1208,8 +1149,7 @@ my.fake.lamb<-function(model){
 
 ## 12.2. Estimating phylogenetic signal for all models
 
-Code below use `my.fake.lamb` to estimate phylogenetic signal for all
-models in a list.
+Code below use `my.fake.lamb` to estimate phylogenetic signal for all models in a list.
 
 package `ggridges` is necessary. Dependency for `geom_density_ridges`
 
@@ -1220,18 +1160,12 @@ traits<-c("Reproduction_SigElas", "Growth_SigElas", "Shrinking_SigElas",  "Clona
 
 #lapply(MCMCglmm_phylo_animals,function(inner_list) inner_list$VCV)
 
-Phylo_signal_animals<-lapply(MCMCglmm_phylo_animals,function(inner_list) as.data.frame(my.fake.lamb(inner_list)))%>%
-  do.call(cbind,.)
-
 Phylo_signal_plants<-lapply(MCMCglmm_phylo_plants,function(inner_list) as.data.frame(my.fake.lamb(inner_list)))%>%
   do.call(cbind,.)
 
-colnames(Phylo_signal_animals)<-str_split_i(traits, "_", 1)
 colnames(Phylo_signal_plants)<-str_split_i(traits, "_", 1)
 
-Phylo_signal_df<-rbind(
-  data.frame(Phylo_signal_plants,Taxa="Plants"),
-  data.frame(Phylo_signal_animals,Taxa="Animals"))%>%
+Phylo_signal_df<-data.frame(Phylo_signal_plants,Taxa="Plants")%>%
   pivot_longer(!Taxa,names_to="Trait",values_to="Values")
 
 Phylo_signal_df%>%
@@ -1246,8 +1180,7 @@ Phylo_signal_df%>%
 
 ## 12.3. Comparing phylogenetic signal {.tabset}
 
-without significant correlation between phylogenetic signal and
-contribution to buffering capacity
+without significant correlation between phylogenetic signal and contribution to buffering capacity
 
 ```{r message=FALSE, warning=FALSE}
 # Summarise phylogenetic signal
@@ -1304,8 +1237,6 @@ ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
         panel.spacing = unit(2, "lines"))
 
 ```
-
-#### Plants & Animals
 
 ```{r}
 Phylo_summary%>%
@@ -1399,9 +1330,4 @@ Check_traces<-function(X){
 
 # References
 
-[^1]: Remember that absolute msum of stochastic elasticity within
-    respect to variance $| \sum E_v^\sigma |$ is extremaly important to
-    the analyses because our question is about the demographic position,
-    not what determine the contribution of these vital rates. If we use
-    raw values we could answers other question but not their position
-    about buffering capacity
+[^1]: Remember that absolute msum of stochastic elasticity within respect to variance $| \sum E_v^\sigma |$ is extremaly important to the analyses because our question is about the demographic position, not what determine the contribution of these vital rates. If we use raw values we could answers other question but not their position about buffering capacity

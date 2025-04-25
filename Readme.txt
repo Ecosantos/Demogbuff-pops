@@ -1,4 +1,0 @@
-This is the framework of analyses performed along the manuscript "Population responses to environmental stochasticity are primarily driven by survival-reproduction trade-offs and mediated by aridity".
-
-
-The main archive in this folder is the "0 - Script Framework 24 de Julho 2024.R". This script contains the core framework step-by-step used in this manuscript. To make the framework concise, each step of the framework was split into smaller pieces which were sourced along the framework. For instance: the first step of the framework is cleaning and selecting the dataset from our databases, at this point, the script framework sources another piece called "1 - Data cleaning and selection" and produces the intermediary dataset called "CleanData.RDS".
