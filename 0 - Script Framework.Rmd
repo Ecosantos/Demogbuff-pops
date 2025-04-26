@@ -80,7 +80,7 @@ The following script provide the general framework used to analyse demographic b
 
 -   Script avaliable in "1 - Data cleaning and selection.R"
 
-```{markdown}
+```
 file.edit("1 - Data cleaning and selection.R")
 ```
 
@@ -138,9 +138,6 @@ spLHmat<-LHtraits%>%
 	filter(is.outlier=="FALSE")%>%
 		select(-c(is.outlier,mahal.dist))	%>%
 column_to_rownames(var = "ID")
-
-#Correlation plot - check colinearity
-#spLHmat%>%cor()%>%corrplot::corrplot(.,title="Check Colinerarity on LH traits")
 ```
 
 ## 3.1 Fast-slow continuum / Life history PCA
@@ -561,6 +558,12 @@ distinct()%>%select(Kingdom)%>%table()
 
 # USED MPMs
 print("Total MPMs");filter(Metadata, ID %in% final_data$ID)$mat%>%length()
+
+```
+> Because animal population are scarce we keep the analyses for plants only. 
+
+```{r}
+final_data<-final_data%>%filter(Kingdom=="Plantae")
 ```
 
 ## 8.1. Prepare phylogenetic information associated
@@ -584,16 +587,16 @@ subtree_Plants<-keep.tip(subtree, rownames(PhyloSig_data_PLANTS))
 Data_model now includes absolute values of sum of stochastic elasticity within respect to variance $| \sum E_v^\sigma |$ (i.e, cumulativa_SigEla).[^1]
 
 ```{r}
-data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))
+data_model<-final_data%>%select(-c(Reproduction_Base:Cumulative_Base))%>%
+  mutate(across(Reproduction_SigElas:Cumulative_SigElas, abs)) #All calculations will be performed with the absolute values
 
 data_model
 
-#Transform CUMULATIVE IN ABSOLUTE VALUE
-data_model$Cumulative_SigElas<-abs(data_model$Cumulative_SigElas)
 ```
 
+<!-- remember rmarkdown cells don't run automatically! --> 
 ```{markdown eval=FALSE, include=FALSE}
-save(data_model,subtree_Animals,subtree_Plants,
+save(data_model,subtree_Plants,
      file = "Data/GLMMdata.Rdata")
 ```
 
@@ -663,14 +666,6 @@ select(2,3,7,4,5,6,8,9)
 ToRank%>%
 left_join(.,ElasSigVR_full,by="ID")%>%mutate_if(is.numeric,round,3)%>%filter(Kingdom=="Plantae")
 
-```
-
-## 10.2. Animals and plants overlaps?
-
-A simple t-test was used and the answer is **Yes!**
-
-```{r}
-t.test(abs(final_data$Cumulative_SigElas)~final_data$Kingdom)
 ```
 
 ### Plot
@@ -751,7 +746,7 @@ Quantify proportional contribution of each vital rate to $| \sum E_v^\sigma |$. 
 ```{r}
 RelContrib<-final_data%>%as_tibble()%>%
 select(ID,Reproduction_SigElas:Survival_SigElas)%>%
-mutate_if(is.numeric,abs)%>%
+mutate_if(is.numeric,abs)%>%  # Make sure valures are in their absolute form. (This is likely to be removed in next version because it is already done in the final dataset  but confirm before remove this line)
 mutate(NewCumulative=rowSums(across(where(is.numeric))))%>%
 #mutate_if(is.numeric,round,4)%>%glimpse()
 pivot_longer(!c(ID,NewCumulative))%>%
@@ -830,7 +825,7 @@ Plot shows stochastic elasticities of each vital rate (A) and its relative effec
 
 <!--# mutate(IsMean="NO") it is important to highlight what points represent the mean for the Kingdom-->
 
-```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 plotbuff<-rbind(
   plotbuff_data%>%mutate(IsMean="NO"),
   final_data%>%
@@ -872,24 +867,14 @@ plotbuff_base<-plotbuff_sigElas<-plotbuff
 plotbuff_base$data<-plotbuff$data%>%
   filter(Form=="Base")
 
-plotbuff_sigElas$data<-plotbuff$data%>%
-  filter(Form=="SigElas")
-
-cowplot::plot_grid(ncol=1,labels="AUTO",
-                   # Vital rate elasticity
-                   plotbuff_base+
-                     ylab(expression(paste("Vital rate elasticity ( ",E[v]," )"))),
-                   # Sum of stochastic elasticity with respect to variance
-                   plotbuff_sigElas+
-                     ylab(bquote("Effect of environmental variation ("~ sum(E[v]^sigma)~" )")))
-
+plotbuff_base
 ```
 
 #### Plot proportional contribution
 
 Proportional contribution of each $|E_{v}^\sigma|$ to $|\sum E_{v}^\sigma|$
 
-```{r fig.width=13, message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 
 RelContrib_plot<-rbind(
   RelContrib_orgType%>%mutate(IsMean="NO"),
@@ -921,19 +906,22 @@ filter(Kingdom=="Plantae")%>%
   facet_grid(Form~Kingdom,scales="free")+
   coord_flip()
 
-RelContrib_plot+ylab(bquote("Proportional contribution to ("~ sum(E[v]^sigma)~" )"))
+RelContrib_plot
 ```
 
 #### Raw figure
 
 Provide the raw figure for posterior editing in proper software
 
-```{r fig.height=13, fig.width=13, message=FALSE, warning=FALSE}
+```{r fig.height=8, fig.width=16, message=FALSE, warning=FALSE}
 cowplot::plot_grid(
-  plotbuff_base+theme(legend.position="none")+ylab(expression(paste("Vital rate elasticity ( ",E[v]," )"))),
-  RelContrib_plot+ylab(bquote("Proportional contribution to ("~ sum(E[v]^sigma)~" )")),
-    ncol=2,labels="AUTO")
-
+  rel_widths=c(.7,.2),nrow=1,
+    cowplot::plot_grid(
+        plotbuff_base+theme(legend.position="none")+ylab(expression(paste("Vital rate elasticity ( ",E[v]," )"))),
+        RelContrib_plot+theme(legend.position="none")+ylab(bquote("Proportional contribution to ("~ sum(E[v]^sigma)~" )")),
+        ncol=2,labels="AUTO"),
+    cowplot::get_legend(plotbuff_base)
+  )
 ```
 
 # 11. MCMCglmm results and tidy
@@ -1021,22 +1009,6 @@ GLMMs_df_summary%>%
 
 ```
 
-### Animals
-
-```{r}
-# PLANTs x Cumulative only
-GLMMs_df_summary%>%
-  filter(Taxa=="Animals" & Trait == "Cumulative_SigElas")%>%
-  group_by(Trait)
-
-
-# By vital rates - Plants & Animals
-GLMMs_df_summary%>%
-  filter(Taxa=="Animals" & !c(Trait %in% c("Cumulative_SigElas","Buffmx")))%>%
-  group_by(Trait)%>%group_split()
-
-```
-
 ## 11.2.2 Posterior distribution
 
 Better for figures.
@@ -1098,13 +1070,6 @@ ggplot_posteriors_vr$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait 
 
 ```
 
-### Posteriors All (plants & animals)
-
-```{r , fig.height=12, fig.width=8}
-# All vital rates + cumulative + All taxa
-ggplot_posteriors
-
-```
 
 ### Cumulative
 
@@ -1182,7 +1147,7 @@ Phylo_signal_df%>%
 
 without significant correlation between phylogenetic signal and contribution to buffering capacity
 
-```{r message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE, results='asis'}
 # Summarise phylogenetic signal
 Phylo_summary <- Phylo_signal_df %>%
   filter(!(Trait %in% c("Cumulative","Buffmx")))%>%
@@ -1209,8 +1174,7 @@ filter(phylo_buffer_df,Taxa=="Plants")$Relativemean
 Detailed values for plants
 
 ```{r}
-Phylo_summary%>%filter(Taxa=="Plants")
-
+Phylo_summary
 ```
 
 ### Bar Plot {.tabset}
@@ -1219,12 +1183,11 @@ Phylo_summary%>%filter(Taxa=="Plants")
 
 ```{r eval=FALSE, include=FALSE}
 #Range of phylogenetic signal for reproduction
-filter(Phylo_signal_df,Trait=="Reproduction" & Taxa=="Plants")$Values%>%range()
+filter(Phylo_signal_df,Trait=="Reproduction")$Values%>%range()
 ```
 
 ```{r}
 Phylo_summary%>%
-  filter(Taxa=="Plants")%>%
 ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
   geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
   geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
@@ -1238,20 +1201,6 @@ ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
 
 ```
 
-```{r}
-Phylo_summary%>%
-ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
-  geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
-  geom_pointrange(aes(ymin = MEDIAN - SD, ymax=pmin(MEDIAN + SD, 1)), 
-                  position = position_dodge(width = 0.9), color = "black", size = 0.8) +
-  scale_fill_manual(values=c("#144375","#1f9a59"))+
-  labs(x = NULL,
-       y = "Phylogenetic signal \n (Pagel's lambda)") +
-  theme_minimal(base_size=18)+
-  theme(legend.position="top",
-        panel.spacing = unit(2, "lines"))
-
-```
 
 ### Phylo x buffer plot
 
@@ -1265,34 +1214,7 @@ phylo_buffer_df%>%
        y="Phylogenetic signal")
 ```
 
-### Animals & Plants data
 
-```{r}
-Phylo_summary
-```
-
-### Animals & Plants plot
-
-```{r, fig.height=12,fig.width=6}
-# PLOT
-Phylo_signal_df%>%
-  group_by(Taxa,Trait)%>%
-  filter(Trait!="Buffmx")%>%
-  filter(!(Values>quantile(Values,.975)))%>%
-  filter(!(Values<quantile(Values,.025)))%>%
-  ggplot(.,aes(x=Values, y =  fct_rev(Trait),fill=Taxa))+
-  #geom_density_ridges(aes(fill = Taxa), rel_min_height = 0.01)+
-  ggridges::geom_density_ridges(aes(fill=Taxa))+
-  xlab("Pagel's lambda )")+
-  scale_fill_manual(values=c("#144375","#1f9a59"))+
-  theme_minimal(base_size=16)+
-  ylab(NULL)+
-  theme(axis.text.y=element_blank(),legend.position="top",
-        panel.spacing = unit(2, "lines"))+
-  facet_grid(Trait~.,scale="free_y")
-```
-
-# 
 
 <!--
 
@@ -1330,4 +1252,4 @@ Check_traces<-function(X){
 
 # References
 
-[^1]: Remember that absolute msum of stochastic elasticity within respect to variance $| \sum E_v^\sigma |$ is extremaly important to the analyses because our question is about the demographic position, not what determine the contribution of these vital rates. If we use raw values we could answers other question but not their position about buffering capacity
+[^1]: Remember that absolute sum of stochastic elasticity within respect to variance $| \sum E_v^\sigma |$ is extremaly important to the analyses because our question is about the demographic position, not what determine the contribution of these vital rates. If we use raw values we could answers other question but not their position about buffering capacity
