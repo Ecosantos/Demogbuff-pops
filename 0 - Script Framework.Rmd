@@ -4,19 +4,36 @@ author:
   name: Gabriel Santos
 date: "`r format(Sys.time(),  '%Y-%m-%d (%H:%M:%S)')`"
 output:
-  html_notebook:
-    theme: paper
+  html_document:
+    df_print: paged
     code_folding: hide
     toc: true
     toc_float:
       collapsed: true
-    cache: false
+    cache: true
 bibliography: references.bib
 ---
 
-```{r "Clean environment", eval=FALSE, include=FALSE}
-# USE TO CLEAN ENVIRONMENT TIME TO TIME
-# rm(list=ls())
+
+```{r "list workspace and pick the most recent environment",  eval=FALSE, include=FALSE}
+# Check existing workspaces
+if (length(
+  list.files(pattern = "workspace", 
+              full.names = TRUE)) > 0) {
+workspaces<- list.files(pattern = "workspace",full.names = TRUE)
+    # Obtém datas de modificação
+  infos <- file.info(workspaces)
+  # Encontra o índice do mais recente
+  idx_recent <- which.max(infos$mtime)
+  # Seleciona o nome do arquivo mais recente
+  workspaces_last <- workspaces[idx_recent]
+  # Exibe
+print(workspaces_last)
+load(workspaces_last)
+} else {
+  message("no workspace was found")
+}
+
 ```
 
 # 0 - Setting
@@ -146,7 +163,7 @@ column_to_rownames(var = "ID")
 -   Check eigenvalues
 -   Plot eigenvalues and correlogram
 
-```{r "life-history PCA",  fig.width=16,  fig.height=8}
+```{r "Figure S2 - life-history PCA",  fig.width=16,  fig.height=8}
 LHpca<-spLHmat%>%filter(complete.cases(.))%>%PCA(.,graph=FALSE,scale=TRUE) # Using raw data without imputatation
 
 # LHpca - Map variables
@@ -213,7 +230,7 @@ climate_df<-readRDS("Data/climate_df.RDS")
 
 ### 4.1.1. Checking collinearity and retaining climatic variables
 
-```{r}
+```{r, label="Figure S3"}
 cor_matrix <- climate_df %>% select(-ID) %>% cor()
 diag(cor_matrix) <- NA  
 
@@ -246,7 +263,7 @@ climate_df<-climate_df%>%select(
 
 Run environmental PCA and show its output
 
-```{r,  fig.width=16,  fig.height=8}
+```{r, "Figure S4 - Environmental PCA", fig.width=16,  fig.height=8}
 # Produce the climatic/environmental PCA
 ClimPCA<-climate_df%>%
 mutate_at(vars(-c(ID)),scale)%>%
@@ -270,15 +287,12 @@ dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
 
 ```
 
-```{markdown eval=FALSE, include=FALSE}
-ggsave(file="Figures/PCAEnv.svg")
-```
 
 ### 4.3 Mapping climatic axes
 
 Plot spatial distribution of studies with climatic data available as well as the values of the two main principal component analyses: life-history and environmental PCAs
 
-```{r message=FALSE, warning=FALSE,  fig.width=16,  fig.height=9,dev=c("png","svg")}
+```{r, "Figure S5 - Map Enviromental PCA", message=FALSE, warning=FALSE,  fig.width=16,  fig.height=9,dev=c("png","svg")}
 Plot_clim<-Metadata%>%
   filter(Kingdom=="Plantae")%>%
   dplyr::select(.,c(ID,Lat,Lon))%>%
@@ -474,12 +488,6 @@ distinct(ID,.keep_all=TRUE)
 merged_data
 ```
 
-Correlation plot
-
-```{r}
-merged_data%>%select_if(is.numeric)%>%cor()%>%corrplot::corrplot()
-
-```
 
 # 7. Building the super tree and make sure it works on phylogenetic analyses
 
@@ -707,7 +715,8 @@ scientific_10 <- function(x) {
 
 Plot
 
-```{r, fig.height=6, fig.width=14}
+```{r, label="Figure S1", fig.height=6, fig.width=14}
+# Figure S1
 final_data%>%
  select(ID:Cumulative_SigElas,Buffmx:MatRep,OrganismType,Kingdom,lambda)%>%
  pivot_longer(!c(ID,MatRep:lambda))%>%
@@ -764,11 +773,13 @@ RelContrib_df<-RelContrib%>%
 group_by(name,Kingdom)%>%
 summarise(Relativemean=mean(RelativeProp),   #Relative contribution (mean for each kingdom)
 		SD=sd(RelativeProp),
-		n=n())
+		n=n(),
+		SE=SD/sqrt(n))
 
 RelContrib_df%>%
   mutate(Relativemean=Relativemean*100,
-         SD=SD*100)%>%mutate_if(is.numeric,round,3)
+         SD=SD*100,
+         SE=SE*100)%>%mutate_if(is.numeric,round,3)
 ```
 
 #### By Organism types
@@ -780,11 +791,13 @@ RelContrib_orgType<-RelContrib%>%
   group_by(Kingdom,name,Taxa)%>%
   summarise(Relativemean=mean(RelativeProp),
             n=n(),
-            SD=sd(RelativeProp))
+            SD=sd(RelativeProp),
+            SE=SD/sqrt(n))
 
 RelContrib_orgType%>%
   mutate(Relativemean=(Relativemean*100),
-         SD=SD*100)%>%mutate_if(is.numeric,round,3)%>%filter(Kingdom=="Plantae")%>%ungroup()%>%select(-Kingdom)
+         SD=SD*100,
+         SE=SE*100)%>%mutate_if(is.numeric,round,3)%>%filter(Kingdom=="Plantae")%>%ungroup()%>%select(-Kingdom)
 
 ```
 
@@ -844,13 +857,13 @@ plotbuff<-rbind(
 )%>%
   mutate(Taxa=fct_relevel(Taxa, "All_plants", "All_animals"))%>%
   #  filter(Form=="Base")%>%
-  mutate(Variable=factor(Variable, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
+  mutate(Variable=factor(Variable, levels = c("Cumulative","Clonality", "Reproduction", "Shrinking", "Growth","Survival")))%>%
   ggplot(.,aes(x=Variable,y=Mean,group=Taxa))+
   geom_pointrange(position=position_dodge(0.4),
-                  aes(ymin = Mean-SE, ymax = Mean+SE,
+                  aes(ymin = Mean-SD, ymax = Mean+SD,
                       fill=Taxa,shape=Kingdom,color=IsMean),linewidth = 1.3,size= 1.1,alpha=.9)+
   ylab(NULL)+xlab(NULL)+
-  scale_shape_manual(values=c(23,21))+
+  scale_shape_manual(values=c(21,23))+
   scale_fill_viridis_d()+
   scale_color_manual(values=c("black","red"))+
   #scale_color_viridis_d()+
@@ -859,7 +872,7 @@ plotbuff<-rbind(
     alpha= "none",
     fill = guide_legend(override.aes=list(shape=c(23,21),alpha=1)))+
   theme_light(base_size=18)+
-  facet_grid(Form~Kingdom,scales="free")+
+  facet_grid(.~Form,scales="free")+
   coord_flip()
 
 plotbuff_base<-plotbuff_sigElas<-plotbuff
@@ -882,7 +895,7 @@ RelContrib_plot<-rbind(
     mutate(IsMean="YES"))%>%
 filter(Kingdom=="Plantae")%>%
     mutate(name = str_remove(name, "_SigElas"))%>%
-  mutate(name=factor(name, levels = c("Cumulative","Survival", "Growth", "Shrinking", "Reproduction","Clonality")))%>%
+  mutate(name=factor(name, levels = c("Cumulative","Clonality", "Reproduction", "Shrinking", "Growth","Survival")))%>%
   mutate(Taxa=fct_relevel(Taxa, "All_plants", "All_animals"))%>%
   mutate(Form="SigElas")%>%
   # filter(Kingdom=="Plantae")%>%
@@ -903,7 +916,7 @@ filter(Kingdom=="Plantae")%>%
   #    override.aes=list(shape=rep(c(23, 21), 
   #                                length.out=nlevels(factor(RelContrib$OrganismType))), alpha=1)))+
   theme_light(base_size=18)+
-  facet_grid(Form~Kingdom,scales="free")+
+  facet_grid(~Form,scales="free")+
   coord_flip()
 
 RelContrib_plot
@@ -913,7 +926,7 @@ RelContrib_plot
 
 Provide the raw figure for posterior editing in proper software
 
-```{r fig.height=8, fig.width=16, message=FALSE, warning=FALSE}
+```{r, label="Figure 2", fig.height=8, fig.width=16, message=FALSE, warning=FALSE}
 cowplot::plot_grid(
   rel_widths=c(.7,.2),nrow=1,
     cowplot::plot_grid(
@@ -922,6 +935,9 @@ cowplot::plot_grid(
         ncol=2,labels="AUTO"),
     cowplot::get_legend(plotbuff_base)
   )
+
+
+# ggsave(file="Figures/Relative contribution.svg", width=16, height=8)
 ```
 
 # 11. MCMCglmm results and tidy
@@ -1073,14 +1089,14 @@ ggplot_posteriors_vr$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait 
 
 ### Cumulative
 
-```{r}
+```{r, label="Figure 1"}
 #  cumulative  & Plants only
 ggplot_posteriors_cumu
 ```
 
 ### Vital rates
 
-```{r dev=c('png','svg'), fig.height=16, fig.width=8}
+```{r label="Figure 4", dev=c('png','svg'), fig.height=16, fig.width=8}
 #  cumulative vr & Plants only
 ggplot_posteriors_vr
 ```
@@ -1147,7 +1163,7 @@ Phylo_signal_df%>%
 
 without significant correlation between phylogenetic signal and contribution to buffering capacity
 
-```{r message=FALSE, warning=FALSE, results='asis'}
+```{r message=FALSE, warning=FALSE}
 # Summarise phylogenetic signal
 Phylo_summary <- Phylo_signal_df %>%
   filter(!(Trait %in% c("Cumulative","Buffmx")))%>%
@@ -1171,7 +1187,7 @@ filter(phylo_buffer_df,Taxa=="Plants")$Relativemean
 )
 ```
 
-Detailed values for plants
+#### Detailed phylogenetic signal for plants
 
 ```{r}
 Phylo_summary
@@ -1186,7 +1202,7 @@ Phylo_summary
 filter(Phylo_signal_df,Trait=="Reproduction")$Values%>%range()
 ```
 
-```{r}
+```{r, label="Figure 3"}
 Phylo_summary%>%
 ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
   geom_bar(stat = "identity", position = position_dodge()) +  # Barras com transparência leve
@@ -1249,6 +1265,20 @@ Check_traces<-function(X){
 #Check_traces(MCMCglmm_simple_plants)
 #Check_traces(MCMCglmm_simple_animals)
 -->
+
+
+<!-- 
+# Save workspace 
+Shorten time to reproduce the code, but caution is necessary. Always check if the existing workspace is uptaded!!!
+--> 
+```{r save-workspace, eval=FALSE, include=FALSE}
+
+save.image(
+  paste0("Workspace_", Sys.Date(), ".RData")
+  ) # Save workspace for further use if necessary
+```
+
+
 
 # References
 
