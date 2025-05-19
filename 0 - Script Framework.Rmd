@@ -14,8 +14,7 @@ output:
 bibliography: references.bib
 ---
 
-
-```{r "list workspace and pick the most recent environment",  eval=FALSE, include=FALSE}
+```{r "list workspace and pick the most recent environment", eval=FALSE, include=FALSE}
 # Check existing workspaces
 if (length(
   list.files(pattern = "workspace", 
@@ -97,7 +96,7 @@ The following script provide the general framework used to analyse demographic b
 
 -   Script avaliable in "1 - Data cleaning and selection.R"
 
-```
+```         
 file.edit("1 - Data cleaning and selection.R")
 ```
 
@@ -286,7 +285,6 @@ coord_fixed(ratio=.60)
 dimdesc(ClimPCA, axes = 1:3, proba = 0.05)
 
 ```
-
 
 ### 4.3 Mapping climatic axes
 
@@ -488,7 +486,6 @@ distinct(ID,.keep_all=TRUE)
 merged_data
 ```
 
-
 # 7. Building the super tree and make sure it works on phylogenetic analyses
 
 -   Check must return:
@@ -568,7 +565,8 @@ distinct()%>%select(Kingdom)%>%table()
 print("Total MPMs");filter(Metadata, ID %in% final_data$ID)$mat%>%length()
 
 ```
-> Because animal population are scarce we keep the analyses for plants only. 
+
+> Because animal population are scarce we keep the analyses for plants only.
 
 ```{r}
 final_data<-final_data%>%filter(Kingdom=="Plantae")
@@ -602,7 +600,8 @@ data_model
 
 ```
 
-<!-- remember rmarkdown cells don't run automatically! --> 
+<!-- remember rmarkdown cells don't run automatically! -->
+
 ```{markdown eval=FALSE, include=FALSE}
 save(data_model,subtree_Plants,
      file = "Data/GLMMdata.Rdata")
@@ -855,6 +854,7 @@ plotbuff<-rbind(
     mutate(Taxa =ifelse(Kingdom=="Animalia", "All_animals","All_plants"))%>%
     mutate(IsMean="YES")
 )%>%
+  filter(Kingdom=="Plantae")%>%
   mutate(Taxa=fct_relevel(Taxa, "All_plants", "All_animals"))%>%
   #  filter(Form=="Base")%>%
   mutate(Variable=factor(Variable, levels = c("Cumulative","Clonality", "Reproduction", "Shrinking", "Growth","Survival")))%>%
@@ -923,8 +923,6 @@ RelContrib_plot
 ```
 
 #### Raw figure
-
-Provide the raw figure for posterior editing in proper software
 
 ```{r, label="Figure 2", fig.height=8, fig.width=16, message=FALSE, warning=FALSE}
 cowplot::plot_grid(
@@ -1086,7 +1084,6 @@ ggplot_posteriors_vr$data<-filter(ggplot_posteriors$data,Taxa=="Plants" & Trait 
 
 ```
 
-
 ### Cumulative
 
 ```{r, label="Figure 1"}
@@ -1193,14 +1190,30 @@ filter(phylo_buffer_df,Taxa=="Plants")$Relativemean
 Phylo_summary
 ```
 
-### Bar Plot {.tabset}
+### Phylo x buffer plot
 
-#### Plants
 
-```{r eval=FALSE, include=FALSE}
+```{r eval=FALSE, include=FALSE, result="asis"}
 #Range of phylogenetic signal for reproduction
 filter(Phylo_signal_df,Trait=="Reproduction")$Values%>%range()
 ```
+
+
+```{r}
+phylo_buffer_df%>%
+  ggplot(data=.,aes(x=Relativemean,y=MEDIAN))+
+  geom_point()+
+  geom_pointrange(aes(ymin=MEDIAN-SD.phylo,ymax=MEDIAN+SD.phylo))+
+#  facet_grid(.~Taxa)+
+  labs(x="Relative contribution to buffering continuum",
+       y=bquote("Phylogenetic signal \n Pagel's" ~lambda~"" ))+
+  theme_minimal(base_size=18)
+```
+
+
+
+### Bar Plot {.tabset}
+
 
 ```{r, label="Figure 3"}
 Phylo_summary%>%
@@ -1216,21 +1229,6 @@ ggplot(., aes(x = Trait, y = MEDIAN, fill = Taxa)) +
         panel.spacing = unit(2, "lines"))
 
 ```
-
-
-### Phylo x buffer plot
-
-```{r}
-phylo_buffer_df%>%
-  ggplot(data=.,aes(x=Relativemean,y=MEDIAN))+
-  geom_point()+
-  geom_pointrange(aes(ymin=MEDIAN-SD.phylo,ymax=MEDIAN+SD.phylo))+
-  facet_grid(.~Taxa)+
-  labs(x="Relative contribution to buffering capacity",
-       y="Phylogenetic signal")
-```
-
-
 
 <!--
 
@@ -1265,17 +1263,43 @@ Check_traces<-function(X){
 #Check_traces(MCMCglmm_simple_plants)
 #Check_traces(MCMCglmm_simple_animals)
 -->
-
-
 <!-- 
 # Save workspace 
 Shorten time to reproduce the code, but caution is necessary. Always check if the existing workspace is uptaded!!!
---> 
+-->
+
 ```{r save-workspace, eval=FALSE, include=FALSE}
 
 save.image(
   paste0("Workspace_", Sys.Date(), ".RData")
   ) # Save workspace for further use if necessary
+```
+
+
+
+# TESTING EFFECT OF TIMESERIE LENGTH ON BUFFERING QUANTIFICATION
+
+```{r, result="asis"}
+#WITH OUTLIER
+plot(log(abs(Cumulative_SigElas))~
+ log(MatRep),
+  data=final_data,
+#  ylab=bquote("log ("~ abs(sum(E[v]^sigma))~")" ),
+ylab=bquote("More Buffered     -         " 
+	%<-% "Relatative effect of environmental variation Log ("~ abs(sum(E[v]^sigma))~" )" %->%  
+									"       +            More Labile"),
+xlab="Timeserie length")
+
+
+```
+
+##### Effect size
+
+
+```{r}
+lm(log(abs(Cumulative_SigElas))~
+ log(MatRep),
+  data=final_data)%>%summary()
 ```
 
 
